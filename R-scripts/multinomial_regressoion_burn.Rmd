@@ -1,0 +1,200 @@
+---
+title: "upper beaver"
+author: "Claire Tortorelli"
+date: "January 2, 2020"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+library(here)
+library(tidyr)
+library(ordinal)
+library(ggplot2)
+library(MASS)
+library(brant) 
+
+```
+
+organize data
+```{r read in data}
+
+ub_veg <- read.csv(here("raw-data","ubdata_16-20_species_average.csv"))
+
+#extract columns for analysis
+sub = ub_veg[c("PLOT","YEAR","BURN17", "VEDU80", "BRJA80", "BRTE80", "CANOPY")]
+#change year to factor
+sub$YEAR <- as.factor(sub$YEAR)
+
+#add brome col by adding brja and brte
+sub$BROME <- sub$BRJA80 + sub$BRTE80
+
+#add IAG col
+sub$IAGall <- sub$BROME + sub$VEDU80
+#add IAG percent cover col
+sub$IAGperc <- sub$IAGall/80*100
+
+
+```
+
+```{r exploring vedu effect on burn}
+#https://marissabarlaz.github.io/portfolio/ols/
+#helpful webpage! ^^
+
+
+#remove control plots
+orddf <- subset(sub, BURN17 != "c_unburned")
+#remove all data collected after the burn
+orddf <- subset(orddf, YEAR == 16)
+
+#change burn level to a factor
+orddf$BURN17 <- factor(as.character(orddf$BURN17), levels = c("unburned","<50",">50"))
+levels(orddf$BURN17) <- list(unburned="unburned", low_sev="<50", high_sev=">50")
+
+qplot(x = IAGperc, y = BURN17, data = orddf)
+
+```
+### Model response
+Ordinal regression with cumulative link model - because our response is an ordered variable (unburned < low sev < high sev)
+```{r}
+#helpful documentation for clm & ordinal regressions- http://people.vcu.edu/~dbandyop/BIOS625/CLM_R.pdf
+
+ord1 <-clm(BURN17 ~ IAGperc + CANOPY, data = orddf) 
+
+summary(ord1) #Wald tests
+#Hessian is a measure of how identifiable the model is; large values, say larger than 1e4 indicate that the model may be ill defined. 
+# - this models Hessian is e^3
+
+#liklihood ratio test
+drop1(ord1, test = "Chi") 
+
+#test the effect of the variables while ignoring the effect of the other variable
+ord2 <- clm(BURN17 ~ 1, data = orddf)
+add1(ord2, scope = ~ IAGperc + CANOPY, test = "Chi")
+
+#liklihood ratio test
+library(lmtest)
+lrtest(ord1, ord2) 
+#CANOPY improves to model fit
+
+
+#plot profiles
+plot(profile(lm16))
+
+```
+Check assumptions
+```{r}
+#checking clm assumptions. IAG is sig. with the nominal-test - that the slope between each pair of outcomes across 2 response levels is the same..
+nominal_test(lm16)
+scale_test(lm16)
+
+#check correlation of canopy and IAGall
+cor(orddf$IAGperc, orddf$CANOPY) #pretty low, -.33
+```
+
+Testing the proportional odds/parallel regression assumption
+```{r}
+#remodling with polr to test parrall regression assumption
+lm2 <- polr(BURN17 ~ IAGperc + CANOPY, data = orddf, Hess = TRUE)
+summary(lm2)
+
+#test parallel regression assumption with brant function
+brant(lm2) 
+# parallel regression assumption has been violated!
+```
+
+
+Data do not appear to meet the assumptions of ordinal regression or partial proportional odds. Using a generalized ordinal model as it relaxes the proportional odds assumption
+
+```{r}
+library(oglmx)
+#estimate ordered logit with heteroskedasticity
+gord1 <- oglmx(BURN17 ~ IAGperc + CANOPY, ~ IAGperc, data= orddf, link = "logit",  delta = 1, threshparam = NULL, constantMEAN = FALSE, constantSD = FALSE)
+summary(gord1)
+margins.oglmx(gord1, ascontinuous = TRUE)
+
+
+#compare models with liklihood ratio test
+
+lrtest(ord1, gord1)
+
+#the simpler model (standard ordered logit) is a better fit than the heteroskadastic model
+```
+
+Attempting a multinomial model as it does not assume normality, linearity, or homoscedasticity
+
+Multinomial model
+```{r}
+library(foreign)
+library(nnet)
+
+
+m1 <- multinom(BURN17 ~ IAGperc + CANOPY, data = orddf) # does not assume linearity, normality, or homoskedasticity, just independence
+summary(m1)
+confint(m1)
+
+#compare multinomial model to ordinal model
+lrtest(m1,lm2) #multinomial model is a better fit than ordinal regression and assumptions are met
+```
+Decided to use a multinomial model because it fits the data best and the data meet all assumptions. 
+
+Instead of calculating probabilities of transitions, we'll calculate the probability 
+
+### plot model
+Extract predictions for plotting
+```{r}
+library(effects)
+
+#extract fits and 95% cis
+fit.eff <- Effect("IAGperc", m1, xlevels = 200)
+fit.df <- data.frame(fit.eff$model.matrix, fit.eff$prob, fit.eff$lower.prob, 
+           fit.eff$upper.prob)
+
+#create predictor df for plotting
+fit.df2 <- gather(fit.df, "burncat", "prob", c(prob.unburned, prob.low_sev, prob.high_sev))
+
+#unburned
+fit.df.ub <- subset(fit.df2[,c(1:3,6,9:10)], burncat == "prob.unburned")
+#low severity
+fit.df.ls <- subset(fit.df2[,c(1:2,4,7,9:10)], burncat == "prob.low_sev")
+#high severity
+fit.df.hs <- subset(fit.df2[,c(1:2,5,8:10)], burncat == "prob.high_sev")
+colnames(fit.df.ub)[3:4] <- c("l.ci", "u.ci")
+colnames(fit.df.ls)[3:4] <- c("l.ci", "u.ci")
+colnames(fit.df.hs)[3:4] <- c("l.ci", "u.ci")
+
+multdf <- rbind(fit.df.ub, fit.df.ls, fit.df.hs)
+multdf$burncat <- factor(multdf$burncat, levels = c("prob.unburned", "prob.low_sev", "prob.high_sev"), labels = c("unburned", "low severity", "high severity"))
+
+newdf <- data.frame(
+  IAG_cover = c(fit.df$IAGperc,fit.df$IAGperc,fit.df$IAGperc),
+  prob = c(fit.df$prob.unburned, fit.df$prob.low_sev, fit.df$prob.high_sev),
+  l.ci = c(fit.df$L.prob.unburned, fit.df$L.prob.low_sev, fit.df$L.prob.high_sev),
+  u.ci = c(fit.df$U.prob.unburned, fit.df$U.prob.low_sev, fit.df$U.prob.high_sev),
+  burncat = factor(rep(c("unburned", "low severity", "high severity"), each=200), levels = c("unburned", "low severity", "high severity")))
+```
+
+Plot standard ordinal regression
+```{r fig.height=4, fig.width=4.25}
+#probability that a site burned in one of these three classes is related to pre-fire IAG cover, after accounting for canopy cover
+
+library(devtools)
+library(ggeffects)
+
+ggplot(newdf, aes(x = IAG_cover, y = prob)) + 
+    geom_ribbon(aes(ymin=l.ci, ymax=u.ci, fill = burncat), alpha = 0.1) +
+  geom_line(aes(color = burncat, group = burncat), se = FALSE, size = 1.2) +
+  scale_color_manual(values = c("#81b29a", "#f2cc8f", "#e07a5f" ))+
+  scale_fill_manual(values = c("#81b29a", "#f2cc8f", "#e07a5f" ))+
+  theme_bw(base_size = 13)+
+  theme(legend.title = element_blank(), legend.position = "bottom")+
+  theme(panel.grid.major = element_blank(), panel.grid.minor = element_blank())+
+  xlab("IAG cover(%)")+
+  ylab("Probability")
+
+#ggsave("ordinal_by_IAG.png")
+```
+
+
+
+
