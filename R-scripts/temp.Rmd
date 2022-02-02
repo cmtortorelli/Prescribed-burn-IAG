@@ -1,0 +1,139 @@
+---
+title: "temp"
+author: "Claire Tortorelli"
+date: "10/22/2021"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+
+library(here)
+library(tidyr)
+library(dplyr)
+```
+
+```{r read in data}
+
+temp <- read.csv(here("raw-data","Temp_Data", "Brer_Rabbit_RAWS.csv"))
+
+#convert date to R date class
+temp$Date <- as.Date(temp$Date,
+                     format = '%m/%d/%Y')
+```
+
+clean data
+```{r}
+#subset Aug 2019 - July 2020
+temp2020 <- temp[3500:3865,]
+
+#remove dates with no data
+temp2020sub <- temp2020[which(temp2020$precip_mm > -1 ),]
+
+temp2020_precip <- temp2020sub[,c(1,3,9)]
+
+
+temp <-  temp[1:3865,]
+
+#remove dates with no data
+tempsub <- temp[which(temp$precip_mm > -1 ),]
+
+#plot
+plot(tempsub$precip_mm ~ tempsub$day_of_year)
+#3 precip values that may be unrealisticly high? Or maybe high snowfall days?
+
+#remove outliers from average
+tempsub <-  tempsub[which(tempsub$precip_mm < 100 ),]
+```
+
+average precip by day of year 2010-2020
+```{r}
+precip_ave <- tempsub %>% group_by(day_of_year) %>%
+  summarise(ave = mean(precip_mm))
+
+#combine with 2020 data
+precip <- merge(precip_ave, temp2020_precip, 
+  by = "day_of_year", all = TRUE)
+
+#remove 2 NAs
+precip <- precip[complete.cases(precip), ]
+
+#sort by date
+precip_ord <- precip[order(precip$Date),]
+
+plot(precip_ord$Date, precip_ord$precip_mm,  type = "l") #2019-2020
+lines(precip_ord$Date, precip_ord$ave, col = "red") 
+```
+
+Smooth data with moving average
+```{r}
+# create size of filter/ moving window
+# To create our coefficients, create a vector of that is n+1 values long, divided by that 
+# n+1. This will ensure that our moving average equally counts values before and after:
+
+#5 day window
+ma5 <- c(rep(1,6)) / 6
+
+#7 day window
+ma7 <- c(rep(1,8)) / 8
+
+#10 day window
+ma10 <- c(rep(1,11)) / 11
+
+#14 day window
+ma14 <- c(rep(1,13)) / 13
+
+#30day window
+ma30 <- c(rep(1,29)) / 29
+```
+
+
+```{r}
+library(stats)
+precip_ord$precipAve_smooth <- stats::filter(precip_ord$ave, ma14, method = "convolution", sides = 2)
+precip_ord$precip2020_smooth <- stats::filter(precip_ord$precip_mm, ma14, method = "convolution", sides = 2)
+
+```
+
+```{r}
+svg("precipitation_14dayAve.svg", width = 5, height = 3)
+#plot smoothed lines
+plot(precip_ord$Date, precip_ord$precip2020_smooth, type = "l", col = "blue",
+          xlab="Date", ylab="Daily Precip. (mm)")
+
+lines(precip_ord$Date, precip_ord$precipAve_smooth, type = "l", main = "Precip (mm)")
+
+legend("topright", legend=c("2019-2020", "10 yr ave."),
+       col=c("blue", "black"), lty=1, cex=0.8)
+
+dev.off()
+# #plot origional lines
+# plot(precip_ord$Date, precip_ord$precip_mm, type = "l", col = "blue", 
+#      xlab="Date", ylab="14-day Ave. Precip. (mm)")
+# lines(precip_ord$Date, precip_ord$ave, type = "l", main = "Precip (mm)")
+
+
+```
+
+summarize data
+```{r}
+#total difference in precip
+sum(precip$precip_mm) - sum(precip$ave) #2.15 mm
+
+(precip_yr <- tempsub %>% group_by(Year) %>%
+  summarise(sum = sum(precip_mm)))
+mean(precip_yr$sum)
+
+
+#by month
+library(lubridate)
+precip$month <- month(as.POSIXlt(precip$Date, format="%m/%d/%Y"))
+
+(precip_mo <- precip %>% group_by(month) %>%
+  summarise(sum2020 = sum(precip_mm),
+            sumAve = sum(ave)))
+
+plot(precip_mo$month, precip_mo$sum2020, col = "blue",
+          xlab="month", ylab="Monthly precip. (mm)")
+points(precip_mo$month, precip_mo$sumAve, col = "black")
+```
