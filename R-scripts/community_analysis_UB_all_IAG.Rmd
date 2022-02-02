@@ -15,17 +15,18 @@ library(here)
 
 ```{r read in data}
 
-ub_veg <- read.csv(here("/raw-data/ubdata_16-20_species_average.csv"))
+ub_veg <- read.csv(here("raw-data/ubdata_16-20_species_average.csv"))
 
 ```
 
+## Prep data for analysis
 
 remove rare species (occur in fewer than 3% of plots)
 ```{r rare species}
 # 0.03*148 = 4.44
 
 #subset df so it just consists of species data
-sp <- ub_veg[,6:120]
+sp <- ub_veg[,6:120] #without canopy
 
 #create a vector that counts number of rows > 0
 count <- apply(sp, 2, function(x){sum(x > 0)})
@@ -37,14 +38,17 @@ ub_vegnorare <- cbind(ub_veg[,1:5], sp_sub)
 
 removed rare species that occurred in fewer than 3% of plots leaving 64 species from the original 115
 
+## NMS with all years
 
 ```{r ordintions}
 sp4nms <- ub_vegnorare[,c(1,6:69)]
 
-sp4nms.sqrt <- sqrt(sp4nms)
+
 #set plot to row names 
-rownames(sp4nms.sqrt) <- sp4nms.sqrt$PLOT_YR 
-sp4nms.sqrt$PLOT_YR  <- NULL 
+rownames(sp4nms) <- sp4nms$PLOT_YR 
+sp4nms$PLOT_YR  <- NULL 
+
+sp4nms.sqrt <- sqrt(sp4nms)
 
 nms <- metaMDS(sp4nms.sqrt, distance='bray', k=2, trymax=50, autotransform=FALSE, wasscores=TRUE, noshare=FALSE) 
 ```
