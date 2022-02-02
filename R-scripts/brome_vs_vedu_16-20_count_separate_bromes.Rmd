@@ -1,0 +1,224 @@
+---
+title: "upper beaver"
+author: "Claire Tortorelli"
+date: "January 2, 2020"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+
+library(here)
+library(MASS)
+library(ggplot2)
+library(nlme)
+library(emmeans)
+library(tidyr)
+```
+
+```{r read in data}
+
+ubveg_iag <- read.csv(here("raw-data", "ubdata_16-20_species_tally.csv"))
+
+
+```
+
+```{r}
+
+#change year to factor
+ubveg_iag$YEAR <- as.factor(ubveg_iag$YEAR)
+
+
+```
+
+
+
+```{r}
+#combine control unburned and uburned plots for one unburned category
+ubveg_iag[ubveg_iag=="c_unburned"] <- "unburned"
+
+#redefine levels for burn17
+ubveg_iag$BURN17 <- factor(ubveg_iag$BURN17,
+levels = c("unburned", "<50", ">50") )
+
+```
+
+model change since fire with pre-fire ventenata and brome as baseline
+```{R}
+#separate pre-fire data from post-fire data
+
+ubiag_postfire <- subset(ubveg_iag, YEAR != '16')
+ubiag_prefire <- subset(ubveg_iag, YEAR == '16')
+
+
+ubiag_prefire$VEDU80_prefire <- ubiag_prefire$VEDU80
+ubiag_prefire$BRTE80_prefire <- ubiag_prefire$BRTE80
+ubiag_prefire$BRJA80_prefire <- ubiag_prefire$BRJA80
+
+ubiag_prefiresub <- ubiag_prefire[c("PLOT", "VEDU80_prefire", "BRTE80_prefire", "BRJA80_prefire")]
+
+#merge prefire and post fire dataframes
+ubiag_merge <- merge(ubiag_postfire, ubiag_prefiresub, by = "PLOT")
+
+```
+
+
+
+
+model IAGs separately using binomial generalized linear mixed models
+```{r}
+library(lme4)
+#https://aosmith.rbind.io/2020/08/20/simulate-binomial-glmm/
+
+(m.vd <- glmer(cbind(VEDU80, 80 - VEDU80) ~ BURN17*YEAR + VEDU80_prefire + (1 | PLOT), data = ubiag_merge, family = binomial))
+
+plot(m.vd)
+
+
+(m.bt <- glmer(cbind(BRTE80, 80 - BRTE80) ~ BURN17*YEAR + BRTE80_prefire +(1 | PLOT), data = ubiag_merge, family = binomial))
+m.bt2 <- update(m.bt, control = glmerControl(optimizer="bobyqa"))
+
+(m.bj <- glmer(cbind(BRJA80, 80 - BRJA80) ~ BURN17*YEAR + BRJA80_prefire +(1 | PLOT), data = ubiag_merge, family = binomial))
+m.bj2 <- update(m.bj, control = glmerControl(optimizer="bobyqa"))
+
+
+summary(m.vd)
+emmeans(m.vd, "YEAR", type = "response")
+summary(m.bt2)
+summary(m.bj2)
+
+library(sjPlot)
+(pvd <- plot_model(m.vd, type = "diag"))
+(pvd <- plot_model(m.bt, type = "slope"))
+#effect of interaction between year 20 and >50burn
+```
+
+
+
+
+
+Extract predictions for plotting
+```{r}
+library(effects)
+library(forcats)
+
+#extract confidence intervals and predictors for brte
+ccbt <- confint(m.bt2,parm="beta_",method="Wald")
+#ccbt.2 <- confint(m.bt,parm="beta_") #longer without optimizer but more accurate
+
+bttab <- data.frame(cbind(est=fixef(m.bt2),ccbt))
+bttab$species <- "BRTE"
+bttab$predictor <- rownames(bttab)
+
+#extract confidence intervals and predictors for brja
+ccbj <- confint(m.bj2,parm="beta_",method="Wald")
+#ccbj.2 <- confint(m.bj2,parm="beta_") #longer but more accurate
+
+bjtab <- data.frame(cbind(est=fixef(m.bj2),ccbj))
+bjtab$species <- "BRJA"
+bjtab$predictor <- rownames(bjtab)
+
+#extract confidence intervals and predictors for vedu
+ccvd <- confint(m.vd,parm="beta_",method="Wald")
+#ccvd.2 <- confint(m.vd3,parm="beta_") #longer but more accurate
+vdtab2 <- data.frame(cbind(est=fixef(m.vd),ccvd))
+vdtab2$species <- "VEDU"
+vdtab2$predictor <- rownames(vdtab2)
+
+#combine all predictions into IAG table
+iagtab <- rbind(bttab, bjtab, vdtab2)
+
+iagtab$predictor <- factor(iagtab$predictor)
+iagtab$species <- factor(iagtab$species)
+levels(iagtab$predictor) <- list("(Intercept)" = "(Intercept)", "low severity" = "BURN17<50", "high severity" = "BURN17>50", "low severity:2019" = "BURN17<50:YEAR19", "low severity:2020" ="BURN17<50:YEAR20", "prefire cover" = "BRTE80_prefire", "prefire cover" = "VEDU80_prefire", "2020" = "YEAR20", "2019" = "YEAR19", "high severity:2020" = "BURN17>50:YEAR20", "high severity:2019" = "BURN17>50:YEAR19", "prefire cover" = "BRJA80_prefire")
+
+iagtab$predictor <- fct_rev(factor(iagtab$predictor, levels = c("(Intercept)", "low severity", "high severity", "2019", "2020", "prefire cover", "low severity:2019", "low severity:2020", "high severity:2019", "high severity:2020")))
+# cor(ubiag_merge$BRTE80, ubiag_merge$BRJA80) #bromes are highly correlated
+# cor(ubiag_merge$VEDU80, ubiag_merge$BROME80) # VEDU is not correalted with bromes
+
+colnames(iagtab) <- c("Estimate", "lower.confint", "upper.confint", "species", "Predictor")
+
+```
+
+Plot estimates
+```{r fig.height=6.5, fig.width=4.25}
+ggplot(data = iagtab, aes(x = Estimate, y = Predictor, group = species, color = species))+
+    geom_vline(xintercept = 0, colour = "dark grey", lty = 2, size = .7)+
+
+  geom_point(size = 3.2, position = position_dodge(0.5)) +
+  geom_errorbar(aes(xmin = lower.confint, xmax = upper.confint), width = .2, alpha = 0.5,position = position_dodge(0.5), size = 1)+
+  theme_bw(base_size = 15) + # Make black and white,
+								# increase base text size
+  theme(panel.grid.minor = element_blank(), legend.position = "bottom")+ # Remove y gridlines
+  
+			       scale_color_manual(values = c( "#8bb8a8", "#22333b", "#754043"))
+
+#log (p/1-p). 
+#ggsave("iag_separate_models.svg")
+```
+
+Plot data
+```{r}
+#plot raw data with standard errors
+#summarize data
+library(Rmisc)
+library(cowplot)
+library(ggpubr)
+
+ubveg_iag$VEDU_perc <- ubveg_iag$VEDU80/80*100
+ubveg_iag$BRTE_perc <- ubveg_iag$BRTE80/80*100
+ubveg_iag$BRJA_perc <- ubveg_iag$BRJA80/80*100
+
+ubveg_iag$YEAR2 <- ubveg_iag$YEAR
+ubveg_iag$BURN2 <- ubveg_iag$BURN17
+levels(ubveg_iag$BURN2) <- list("unburned" = "unburned", "low severity" = "<50", "high severity" = ">50")
+levels(ubveg_iag$YEAR2) <- list("2016" = "16", "2018" = "18", "2019" = "19", "2020" = "20")
+#ventenata
+vdsum <- summarySE(ubveg_iag, measurevar="VEDU_perc", groupvars=c("BURN2","YEAR2"))
+#brte
+btsum <- summarySE(ubveg_iag, measurevar="BRTE_perc", groupvars=c("BURN2","YEAR2"))
+#brja
+bjsum <- summarySE(ubveg_iag, measurevar="BRJA_perc", groupvars=c("BURN2","YEAR2"))
+
+
+```
+plotting function
+```{r fig.height=4.25, fig.width=8.5}
+plotIAG <- function(df,y.var){
+ p <-  ggplot(df, aes(x = as.integer(as.character(YEAR2)), y = y.var, group = BURN2, color = BURN2) ) + 
+		geom_line(position = position_dodge(0.2))+
+		geom_point(size = 3.2, position = position_dodge(0.2)) + # Add points
+  geom_errorbar(aes(ymin = y.var - se, ymax = y.var + se), width = .5, alpha = 0.5, size = 1, position = position_dodge(0.2))+
+		labs(x = NULL, y = "Mean cover(%)") + # Label axes
+		theme_bw(base_size = 15) + # Make black and white,
+								# increase base text size
+    theme(panel.grid.major = element_blank(), panel.grid.minor = element_blank())+
+	
+	scale_color_manual(values = c("#606c38", "#dda15e", "#bc6c25"))+
+  theme(legend.title = element_blank()) +
+  geom_vline(xintercept = 2017, colour = "dark grey", lty = 2)+
+  ylim(min = 0, max = 35)
+
+ return(p)
+}
+```
+
+combine plots
+```{r}
+
+rawvd <- plotIAG(vdsum, vdsum$VEDU_perc) + ggtitle(expression(italic("V. dubia"))) +  theme(legend.position = "bottom")
+
+rawbt <- plotIAG(btsum, btsum$BRTE_perc) + ggtitle(expression(italic("B. tectorum"))) + theme(legend.position = "NULL") + ylab("")
+
+rawbj <- plotIAG(btsum, btsum$BRTE_perc) + ggtitle(expression(italic("B. arvensis"))) + theme(legend.position = "NULL") + ylab("")
+
+legend <- get_legend(rawvd)
+
+rawvd <- rawvd + theme(legend.position="none") 
+
+rawplots <- ggarrange(rawvd, rawbt, rawbj, ncol = 3, common.legend = TRUE, legend="bottom")
+
+rawplots
+
+#ggsave("annual_Grass_cover_through_time_raw.svg")
+```

@@ -1,0 +1,258 @@
+---
+title: "upper beaver"
+author: "Claire Tortorelli"
+date: "January 2, 2020"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+
+library(tidyverse)
+library(here)
+```
+
+```{r read in data}
+
+ub_veg <- read.csv(here("/raw-data/ubdata_16-20_species_tally.csv"))
+
+
+```
+
+
+
+Organize species data
+```{r}
+#add  IAG col
+ub_veg$IAG <- ub_veg$VEDU80 + ub_veg$BRJA80 + ub_veg$BRTE80
+
+#Divide annual grass cols by 2 to account for their being 80 hits instead of 40 like non IAG species along each transect
+
+ub_veg$IAG40 <- round(ub_veg$IAG/2) #all IAG
+ub_veg$VUMI40 <- round(ub_veg$VUMI80/2) #Vulpia microstachys
+ub_veg$AGIN40 <- round(ub_veg$AGIN80/2) #Apera interupta
+
+#non IAG col
+ub_veg$all_veg_woIAG <- (rowSums(ub_veg[,6:120]) - ub_veg$IAG - ub_veg$VUMI80 + ub_veg$VUMI40 - ub_veg$AGIN80 + ub_veg$AGIN40)
+
+#all veg without the canopy and without IAG
+ub_veg$veg.noiag.nocanopy <- ub_veg$all_veg_woIAG - ub_veg$PIPO - ub_veg$PSME - ub_veg$JUOC - ub_veg$CELE
+
+#add all veg col
+ub_veg$all_veg <- ub_veg$IAG40 + ub_veg$all_veg_woIAG
+
+#all veg without canopy cover
+ub_veg$all_veg.nocanopy <- ub_veg$IAG40 + ub_veg$veg.noiag.nocanopy
+
+
+#add proportion IAG col (out of understory veg)
+ub_veg$prop.IAG <- ub_veg$IAG40/ub_veg$all_veg.nocanopy
+```
+
+Organize non-veg factors
+```{r}
+#change year to factor
+ub_veg$YEAR <- as.factor(ub_veg$YEAR)
+
+# combine unburned and c_unburned 
+ub_veg$burn2 <- ub_veg$BURN17
+ub_veg$burn2[ub_veg$burn2=="c_unburned"] <- "unburned"
+
+#redefine levels for burn17
+ub_veg$burn2 <- factor(ub_veg$burn2,
+levels = c("unburned", "<50", ">50") )
+```
+
+
+```{R}
+#organize data so that prefire IG cover has its own column
+
+ubiag_postfire <- subset(ub_veg, YEAR != '16')
+ubiag_prefire <- subset(ub_veg, YEAR == '16')
+
+
+ubiag_prefire$IAG40_prefire <- ubiag_prefire$IAG40
+ubiag_prefire$all_veg.nocanopy_prefire <- ubiag_prefire$all_veg.nocanopy
+
+ubiag_prefiresub <- ubiag_prefire[c("PLOT", "IAG40_prefire", "all_veg.nocanopy_prefire")]
+
+#merge prefire and post fire dataframes
+ub_merge <- merge(ubiag_postfire, ubiag_prefiresub, by = "PLOT")
+```
+
+
+model proportion of IAG to total non canopy vegetation
+```{r}
+hist(ub_merge$prop.IAG) #not a normal distribution, heavy zeros then kinda normal looking - hurdle model?
+
+qplot(burn2, prop.IAG, data = ub_veg)
+
+# give our response as both the number of successes and failures (IAG and all_veg-IAG)
+
+(gm1 <- glmer(cbind(IAG40, all_veg.nocanopy - IAG40) ~ burn2*YEAR + IAG40_prefire + (1 | PLOT),
+              data = ub_merge, family = binomial))
+
+
+#check for overdispersion
+plot(gm1) #model fit looks good?
+sum( residuals(gm1, type = "pearson")^2 )/100 #100 = df.resid
+#dispersion = 0.578
+
+
+qplot(fitted(gm1), resid(gm1) ) +
+theme_bw() +
+labs(x = "Fitted",
+y = "Deviance Residuals") #low overdispersion
+
+summary(gm1)
+#Anova(gm1, type = 3)
+```
+
+```{r}
+#use trt.vs.ctrl to compare all groups to reference level (unburned)
+emm <- emmeans(gm1, specs = trt.vs.ctrl ~ burn2*YEAR, type = "response")
+emm
+plot(emm)
+
+```
+strong effect of pre-fire IAG, positive effect of year 20 and some negative effect of high severity. No evidence of interaction, although negative effect of burning seems to decrease with time after fire
+
+
+
+
+```{r}
+#get estimates and confidence interval into table to plot
+
+( prop_fit = emm$emmeans %>%
+as.data.frame() )
+
+```
+
+```{r}
+prop_fit$burn2 = c(
+                    "unburned",
+                    "low severity",
+                          "high severity",
+
+                    "unburned",
+                    "low severity",
+                          "high severity",
+ 
+                    "unburned",
+                    "low severity",
+                          "high severity")
+
+```
+
+
+plot estimates for each year for each species
+```{r fig.height=4, fig.width=4}
+g1r = ggplot(prop_fit, aes(x = as.integer(as.character(YEAR)), y = prob, group = burn2, color = burn2) ) + 
+		geom_line(position = position_dodge(0.2))+
+		geom_point(size = 3.2, position = position_dodge(0.2)) + # Add points
+  geom_errorbar(aes(ymin = asymp.LCL, ymax = asymp.UCL), width = .2, alpha = 0.5, position = position_dodge(0.2))+
+		labs(x = NULL, y = "Proportion IAG") + # Label axes
+		theme_bw(base_size = 14) + # Make black and white,
+								# increase base text size
+
+			 theme(panel.grid.major.x = element_blank())+ # Remove y gridlines
+			       scale_color_manual(values = c("#E69F00", "#F0E442", "#009E73"))+
+  ggtitle("Proportion IAG after controlling pre-fire IAG") +
+  theme(legend.position = "bottom")+ 
+  theme(legend.title = element_blank()) +
+  geom_vline(xintercept = 17, colour = "orangered4", lty = 2)+
+  theme(panel.grid.major = element_blank(), panel.grid.minor = element_blank())
+	
+g1r
+
+
+#ggsave("ventenata.vs.brome.by.burn.year.svg", plot = spfire)
+
+
+```
+
+```{r fig.height=4, fig.width=4.25}
+#plot raw data with standard errors
+#summarize data
+library(Rmisc)
+#ventenata
+iagsum <- summarySE(ub_veg, measurevar="prop.IAG", groupvars=c("burn2","YEAR"))
+levels(iagsum$burn2) <- list("unburned" = "unburned", "low severity" = "<50", "high severity" = ">50")
+levels(iagsum$YEAR) <- list("2016" = "16", "2018" = "18", "2019" = "19", "2020" = "20")
+
+rawiagprop <- ggplot(iagsum, aes(x = as.integer(as.character(YEAR)), y = prop.IAG, group = burn2, color = burn2) ) + 
+		geom_line(position = position_dodge(0.2))+
+		geom_point(size = 3.2, position = position_dodge(0.2)) + # Add points
+  geom_errorbar(aes(ymin = prop.IAG - se, ymax = prop.IAG + se), width = .5, alpha = 0.5, size = 1, position = position_dodge(0.2))+
+		labs(x = NULL, y = "mean IAG:total cover") + # Label axes
+		theme_bw(base_size = 14) + # Make black and white,
+								# increase base text size
+			 theme(panel.grid.major.x = element_blank())+ # Remove y gridlines
+			         scale_color_manual(values = c("#81b29a", "#f2cc8f", "#e07a5f" ))+
+  theme(legend.position = "bottom")+ 
+  theme(legend.title = element_blank()) +
+  ggtitle("prop IAG")+
+  geom_vline(xintercept = 2017, colour = "dark grey", lty = 2)+
+    theme(panel.grid.major = element_blank(), panel.grid.minor = element_blank())
+
+
+rawiagprop
+#ggsave("propIAGraw.svg")
+```
+
+
+model total IAG after burning accounting for pre-fire IAG
+```{R total IAG}
+
+(m2 <- glmer.nb(IAG40 ~ burn2*YEAR + IAG40_prefire + (1 | PLOT), 
+              data = ub_merge))
+plot(m2)
+
+qplot(fitted(m2), resid(m2) ) +
+theme_bw() +
+labs(x = "Fitted",
+y = "Deviance Residuals") #low overdispersion
+
+
+summary(m2)
+Anova(m2, type =3)
+
+library(sjPlot)
+plot_model(m2, type = "int")
+```
+
+
+```{r}
+emm2 <- emmeans(m2, specs = trt.vs.ctrl ~ burn2*YEAR, type = "response")
+
+
+```
+
+burning had a negative effect on IAG, but this effect increased with time... Year 20 had a large positive effect on IAG. 
+
+```{r fig.height=4, fig.width=4}
+ub_veg$IAG_cover <- ub_veg$IAG40/40*100
+iagtot <- summarySE(ub_veg, measurevar="IAG_cover", groupvars=c("burn2","YEAR"))
+
+rawiagtot <- ggplot(iagtot, aes(x = as.integer(as.character(YEAR)), y = IAG_cover, group = burn2, color = burn2) ) + 
+		geom_line(position = position_dodge(0.2))+
+		geom_point(size = 3.2, position = position_dodge(0.2)) + # Add points
+  geom_errorbar(aes(ymin = IAG_cover - se, ymax = IAG_cover + se), width = .2, alpha = 0.5, position = position_dodge(0.2))+
+		labs(x = NULL, y = "mean IAG cover(%)") + # Label axes
+		theme_bw(base_size = 14) + # Make black and white,
+								# increase base text size
+			 theme(panel.grid.major.x = element_blank())+ # Remove y gridlines
+			         scale_color_manual(values = c("#009E73", "#F0E442", "#E69F00"))+
+  theme(legend.position = "bottom")+ 
+  theme(legend.title = element_blank()) +
+  ggtitle("total IAG cover")+
+  geom_vline(xintercept = 17, colour = "orangered4", lty = 2)+
+    theme(panel.grid.major = element_blank(), panel.grid.minor = element_blank())
+
+
+rawiagtot
+
+```
+This may be misleading because multiple annual grasses could have been tallied at a single point..
+
+```

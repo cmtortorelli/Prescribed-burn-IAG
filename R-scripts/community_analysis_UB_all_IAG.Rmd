@@ -1,0 +1,181 @@
+---
+title: "upper beaver"
+author: "Claire Tortorelli"
+date: "January 2, 2020"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+library(vegan)
+library(expss)
+library(tidyverse)
+library(here)
+```
+
+```{r read in data}
+
+ub_veg <- read.csv(here("/raw-data/ubdata_16-20_species_average.csv"))
+
+```
+
+
+remove rare species (occur in fewer than 3% of plots)
+```{r rare species}
+# 0.03*148 = 4.44
+
+#subset df so it just consists of species data
+sp <- ub_veg[,6:120]
+
+#create a vector that counts number of rows > 0
+count <- apply(sp, 2, function(x){sum(x > 0)})
+# remove species that occured in fewer than 5 plots
+sp_sub <- sp[,-which(count < 5)]
+
+ub_vegnorare <- cbind(ub_veg[,1:5], sp_sub)
+```
+
+removed rare species that occurred in fewer than 3% of plots leaving 64 species from the original 115
+
+
+```{r ordintions}
+sp4nms <- ub_vegnorare[,c(1,6:69)]
+
+sp4nms.sqrt <- sqrt(sp4nms)
+#set plot to row names 
+rownames(sp4nms.sqrt) <- sp4nms.sqrt$PLOT_YR 
+sp4nms.sqrt$PLOT_YR  <- NULL 
+
+nms <- metaMDS(sp4nms.sqrt, distance='bray', k=2, trymax=50, autotransform=FALSE, wasscores=TRUE, noshare=FALSE) 
+```
+
+
+group by year/ burn/ >10% IAG
+```{r}
+#create IAG col
+ub_vegnorare$IAG <- ub_vegnorare$VEDU80 + ub_vegnorare$BRJA80 + ub_vegnorare$BRTE80
+
+#assign new IAG column for plots with >10% IAG cover
+ub_vegnorare$IAGcat <- 0
+ub_vegnorare$IAGcat[ub_vegnorare$IAG > 10] <- 1
+
+
+ub_vegnorare$IAG_YR <- as.factor(paste(ub_vegnorare$YEAR, ub_vegnorare$IAGcat, sep = "_"))
+
+ub_vegnorare$IAG_burn <-  as.factor(paste(ub_vegnorare$IAGcat, ub_vegnorare$BURN17, sep = "_"))
+
+
+#new column for plots with IAGs before burning
+ub_vegnorare$IAG.preburn <- NA
+ub_vegnorare$IAG.preburn[ub_vegnorare$IAG >= 10 & ub_vegnorare$YEAR == 16] <- 1
+ub_vegnorare$IAG.preburn[ub_vegnorare$IAG < 10 & ub_vegnorare$YEAR == 16] <- 0
+```
+
+
+```{r}
+#create a category for burned (B) vs. unburned (U)
+ub_vegnorare$BURN2 <- "B"
+ub_vegnorare$BURN2[ub_vegnorare$BURN17 == "c_unburned" | ub_vegnorare$BURN17 == "unburned"] <- "U"
+ub_vegnorare$BURN2 <- as.factor(ub_vegnorare$BURN2)
+ub_vegnorare$IAGburn <- as.factor(paste(ub_vegnorare$IAGcat, ub_vegnorare$BURN2, sep = "_"))
+ub_vegnorare$IAGburn_YR <- as.factor(paste(ub_vegnorare$YEAR, ub_vegnorare$IAGburn, sep = "_"))
+ub_vegnorare$BURN_YR <- as.factor(paste(ub_vegnorare$BURN2, ub_vegnorare$YEAR, sep = "_"))
+ub_vegnorare$IAG.preburn_BURN <- as.factor(paste(ub_vegnorare$BURN2, ub_vegnorare$IAG.preburn, sep = "_"))
+ub_vegnorare$IAG.preburn_BURN_YR <- as.factor(paste(ub_vegnorare$YEAR, ub_vegnorare$IAG.preburn_BURN, sep = "_"))
+#convert year to factor
+ub_vegnorare$YEAR <- as.factor(ub_vegnorare$YEAR)
+ub_vegnorare$PLOT <- as.factor(ub_vegnorare$PLOT)
+```
+
+plot
+```{r}
+plot(nms)
+#ordihull(nms, ub_vegnorare$YEAR, col=1:4, lwd=3)
+#ordiellipse(nms, ub_vegnorare$YEAR, col=1:4, kind = "ehull", lwd=3)
+#ordiellipse(nms, ub_vegnorare$YEAR, col=1:4, draw="polygon", label = TRUE)
+#ordiellipse(nms, ub_vegnorare$BURN17, col=1:4, draw="polygon", label = TRUE)
+#ordiellipse(nms, ub_vegnorare$BURN17, col=1:4, kind = "ehull", lwd=3, label = TRUE)
+#ordiellipse(nms, ub_vegnorare$BURN_YR, col=1:4, kind = "ehull", lwd=3, label = TRUE)
+#ordiellipse(nms, ub_vegnorare$BURN_YR, col=1:4, draw="polygon", label = TRUE)
+# ordiellipse(nms, ub_vegnorare$VEDUcat, col=1:4, draw="polygon", label = TRUE)
+# ordiellipse(nms, ub_vegnorare$VEDUcat, col=1:4, kind = "ehull", lwd=3, label = TRUE)
+#ordiellipse(nms, ub_vegnorare$VEDU_burn, col=1:4, draw="polygon", label = TRUE)
+#ordiellipse(nms, ub_vegnorare$VEDU_burn, col=1:4, kind = "ehull", lwd=3, label = TRUE)
+#ordiellipse(nms, ub_vegnorare$IAGburn_YR, col=1:4, kind = "ehull", lwd=3, label = TRUE)
+# ordiellipse(nms, ub_vegnorare$IAGburn_YR, col=1:4, draw="polygon")
+ordiarrows (nms, groups = ub_vegnorare$PLOT, order.by = ub_vegnorare$YEAR, label = FALSE, length = .1, display = "sites")
+
+ordiellipse(nms, ub_vegnorare$IAG.preburn_BURN, col = 1:4, kind="ehull", label = TRUE, show.groups = c("B_0", "B_1", "U_0", "U_1"))
+# ordiellipse(nms, ub_vegnorare$IAG.preburn_BURN_YR, col = 1:4, kind="ehull", label = TRUE, show.groups = c("16_B_0", "16_B_1", "16_U_0", "16_U_1", "20_B_NA", "20_U_NA"))
+```
+
+```{R with only 16 and 20 data}
+
+sp4nms2 <- ub_vegnorare[which(ub_vegnorare$YEAR == "16" | ub_vegnorare$YEAR == "20"),c(1,6:69)]
+#set plot to row names 
+rownames(sp4nms2) <- sp4nms2$PLOT_YR 
+sp4nms2$PLOT_YR  <- NULL 
+
+nms2 <- metaMDS(sp4nms2, distance='bray', k=2, trymax=50, autotransform=FALSE, wasscores=TRUE, noshare=FALSE) 
+
+ub_vegnorare2 <- ub_vegnorare[which(ub_vegnorare$YEAR == 16 | ub_vegnorare$YEAR == 20),]
+
+
+```
+```{r}
+#extract scores to plot with vectors
+speciesScores <- nms2$species
+siteScores <- nms2$points
+
+ub_vegnorare2_scores <- cbind(ub_vegnorare2, data.frame(siteScores))
+```
+
+
+```{r}
+plot(nms2)
+
+ordiarrows (nms2, groups = ub_vegnorare2$PLOT, order.by = ub_vegnorare2$YEAR, label = FALSE, length = .1, display = "sites")
+
+ordiellipse(nms2, ub_vegnorare2$IAG.preburn_BURN,
+            scaling = 3, label = TRUE, draw = "polygon",
+            col = c("green", "blue", "yellow", "red"),
+            kind = "sd",
+            alpha = 70,
+            border = c("green", "blue", "yellow", "red"),
+            show.groups = c("B_0", "B_1", "U_0", "U_1"))
+
+#arrows(0, 0, variableScores[, 1], variableScores[, 2], length=0.1, angle=20, col ="grey")
+
+points(ub_vegnorare2_scores[, 81], ub_vegnorare2_scores[, 82], pch=16, cex=0.7, col="#666666")
+
+
+points(speciesScores[, 1], speciesScores[, 2], pch=16, cex=0.7, col="grey")
+#set text
+text(speciesScores[, 1], speciesScores[, 2], pos = 3, offset = 0.5, col = "black", font = 2, rownames(speciesScores), cex=0.7)
+
+
+ 
+# ordiellipse(nms, ub_vegnorare$IAG.preburn_BURN_YR, col = 1:4, kind="ehull", label = TRUE, show.groups = c("16_B_0", "16_B_1", "16_U_0", "16_U_1", "20_B_NA", "20_U_NA"))
+
+
+```
+Calculate trajectories
+```{r}
+library(vegclust)
+library(RColorBrewer)
+library(smacof)
+#calculate distnace matrix for nms
+nmsdist <- as.matrix(metaMDSdist(sp4nms, distance='bray', k=2, trymax=50, autotransform=FALSE, wasscores=TRUE, noshare=FALSE))
+nmsdist2 <- as.matrix(metaMDSdist(sp4nms2, distance='bray', k=2, trymax=50, autotransform=FALSE, wasscores=TRUE, noshare=FALSE))
+
+```
+
+```{r}
+tlen <- trajectoryLengths(nmsdist, ub_vegnorare$PLOT, ub_vegnorare$YEAR)
+tlen2 <- trajectoryLengths(nmsdist2, ub_vegnorare2$PLOT, ub_vegnorare2$YEAR)
+# tdist <- trajectoryDistances(nmsdist, ub_vegnorare$PLOT, ub_vegnorare$YEAR, distance.type = "Hausdorff")
+
+trajectoryPlot(nmsdist, ub_vegnorare$PLOT, ub_vegnorare$YEAR, traj.colors = ub_vegnorare$IAG.preburn_BURN)
+
+trajectoryPlot(nmsdist2, ub_vegnorare2$PLOT, ub_vegnorare2$YEAR, traj.colors = ub_vegnorare2$IAG.preburn_BURN, distance.type = "Hausdorff")
+```
