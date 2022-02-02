@@ -79,14 +79,14 @@ lrtest(ord1, ord2)
 
 
 #plot profiles
-plot(profile(lm16))
+plot(profile(ord1))
 
 ```
 Check assumptions
 ```{r}
 #checking clm assumptions. IAG is sig. with the nominal-test - that the slope between each pair of outcomes across 2 response levels is the same..
-nominal_test(lm16)
-scale_test(lm16)
+nominal_test(ord1)
+scale_test(ord1)
 
 #check correlation of canopy and IAGall
 cor(orddf$IAGperc, orddf$CANOPY) #pretty low, -.33
@@ -95,11 +95,11 @@ cor(orddf$IAGperc, orddf$CANOPY) #pretty low, -.33
 Testing the proportional odds/parallel regression assumption
 ```{r}
 #remodling with polr to test parrall regression assumption
-lm2 <- polr(BURN17 ~ IAGperc + CANOPY, data = orddf, Hess = TRUE)
-summary(lm2)
+ord3 <- polr(BURN17 ~ IAGperc + CANOPY, data = orddf, Hess = TRUE)
+summary(ord3)
 
 #test parallel regression assumption with brant function
-brant(lm2) 
+brant(ord3) 
 # parallel regression assumption has been violated!
 ```
 
@@ -134,7 +134,11 @@ summary(m1)
 confint(m1)
 
 #compare multinomial model to ordinal model
-lrtest(m1,lm2) #multinomial model is a better fit than ordinal regression and assumptions are met
+lrtest(m1,ord1)
+summary(m1) #AIC 52.7
+summary(ord1) #AIC 56.8
+
+#multinomial model is a better fit than ordinal regression and assumptions are met
 ```
 Decided to use a multinomial model because it fits the data best and the data meet all assumptions. 
 
@@ -184,8 +188,8 @@ library(ggeffects)
 ggplot(newdf, aes(x = IAG_cover, y = prob)) + 
     geom_ribbon(aes(ymin=l.ci, ymax=u.ci, fill = burncat), alpha = 0.1) +
   geom_line(aes(color = burncat, group = burncat), se = FALSE, size = 1.2) +
-  scale_color_manual(values = c("#81b29a", "#f2cc8f", "#e07a5f" ))+
-  scale_fill_manual(values = c("#81b29a", "#f2cc8f", "#e07a5f" ))+
+  scale_color_manual(values = c("#606c38", "#dda15e", "#bc6c25"))+
+  scale_fill_manual(values = c("#606c38", "#dda15e", "#bc6c25"))+
   theme_bw(base_size = 13)+
   theme(legend.title = element_blank(), legend.position = "bottom")+
   theme(panel.grid.major = element_blank(), panel.grid.minor = element_blank())+
