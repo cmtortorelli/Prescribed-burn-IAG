@@ -11,81 +11,94 @@ library(vegan)
 library(expss)
 library(tidyverse)
 library(here)
+#install.packages(c("wordcloud","tm"),repos="http://cran.r-project.org")
+library(wordcloud)
+library(tm)
 ```
 
 ```{r read in data}
 
 ub_veg <- read.csv(here("raw-data/ubdata_16-20_species_average.csv"))
-
+sp <- read.csv(here("raw-data/speciesList_USDAplants.csv"))
 ```
 
 ## Prep data for analysis
 
-remove rare species (occur in fewer than 3% of plots)
+Calculate functional group cover for overlay
+
+```{r}
+#convert to long format
+df <- ub_veg %>% gather(key = "CT_CODE", value = "cover", -(1:5))
+
+#merge with functional groups
+
+func <- merge(df, sp)
+
+#check to make sure all names match
+# spname <- colnames(ub_veg)
+# spname %in% sp$CT_CODE #looks good!
+
+
+#add new group for functional group
+func$funcgroup <- paste(func$duration, func$habit, func$status, sep = ".")
+
+#add cover by plot for each functional group
+
+func_sum <- func %>% group_by(PLOT_YR, funcgroup) %>%
+              summarise(funcSum = sum(cover)) %>%
+              spread(., funcgroup, funcSum)
+
+funcdf <- merge(func_sum, ub_veg[,1:5])
+
+```
+
+remove overstory species
+```{r}
+# tree <- c("PIPO", "PSME", "JUOC")
+# 
+# ub_vegund <- subset(ub_veg, select = -c(PIPO, PSME, JUOC))
+
+```
+
+
+
+remove rare species (occur in fewer than 5% of plots)
 ```{r rare species}
 # 0.03*148 = 4.44
+# 0.05*148 = 7.4
 
 #subset df so it just consists of species data
-sp <- ub_veg[,6:120] #without canopy
+sp <- ub_veg[,6:114] #without canopy
 
 #create a vector that counts number of rows > 0
 count <- apply(sp, 2, function(x){sum(x > 0)})
-# remove species that occured in fewer than 5 plots
-sp_sub <- sp[,-which(count < 5)]
+# remove species that occured in fewer than 8 plots
+sp_sub <- sp[,-which(count < 8)]
 
 ub_vegnorare <- cbind(ub_veg[,1:5], sp_sub)
 ```
 
-removed rare species that occurred in fewer than 3% of plots leaving 64 species from the original 115
+removed rare species that occurred in fewer than 5% of plots leaving 49 species from the original 115
 
 ## NMS with all years
 
 ```{r ordintions}
-sp4nms <- ub_vegnorare[,c(1,6:69)]
+sp4nms <- ub_vegnorare[,c(1,6:54)]
 
 
 #set plot to row names 
 rownames(sp4nms) <- sp4nms$PLOT_YR 
 sp4nms$PLOT_YR  <- NULL 
 
-sp4nms.sqrt <- sqrt(sp4nms)
 
-nms <- metaMDS(sp4nms.sqrt, distance='bray', k=2, trymax=50, autotransform=FALSE, wasscores=TRUE, noshare=FALSE) 
+nms <- metaMDS(sqrt(sp4nms), distance='bray', k=2, trymax=50, autotransform=FALSE, wasscores=TRUE, noshare=FALSE) 
 ```
 
 
-group by year/ burn/ >10% IAG
-```{r}
-#create IAG col
-ub_vegnorare$IAG <- ub_vegnorare$VEDU80 + ub_vegnorare$BRJA80 + ub_vegnorare$BRTE80
 
-#assign new IAG column for plots with >10% IAG cover
-ub_vegnorare$IAGcat <- 0
-ub_vegnorare$IAGcat[ub_vegnorare$IAG > 10] <- 1
-
-
-ub_vegnorare$IAG_YR <- as.factor(paste(ub_vegnorare$YEAR, ub_vegnorare$IAGcat, sep = "_"))
-
-ub_vegnorare$IAG_burn <-  as.factor(paste(ub_vegnorare$IAGcat, ub_vegnorare$BURN17, sep = "_"))
-
-
-#new column for plots with IAGs before burning
-ub_vegnorare$IAG.preburn <- NA
-ub_vegnorare$IAG.preburn[ub_vegnorare$IAG >= 10 & ub_vegnorare$YEAR == 16] <- 1
-ub_vegnorare$IAG.preburn[ub_vegnorare$IAG < 10 & ub_vegnorare$YEAR == 16] <- 0
-```
 
 
 ```{r}
-#create a category for burned (B) vs. unburned (U)
-ub_vegnorare$BURN2 <- "B"
-ub_vegnorare$BURN2[ub_vegnorare$BURN17 == "c_unburned" | ub_vegnorare$BURN17 == "unburned"] <- "U"
-ub_vegnorare$BURN2 <- as.factor(ub_vegnorare$BURN2)
-ub_vegnorare$IAGburn <- as.factor(paste(ub_vegnorare$IAGcat, ub_vegnorare$BURN2, sep = "_"))
-ub_vegnorare$IAGburn_YR <- as.factor(paste(ub_vegnorare$YEAR, ub_vegnorare$IAGburn, sep = "_"))
-ub_vegnorare$BURN_YR <- as.factor(paste(ub_vegnorare$BURN2, ub_vegnorare$YEAR, sep = "_"))
-ub_vegnorare$IAG.preburn_BURN <- as.factor(paste(ub_vegnorare$BURN2, ub_vegnorare$IAG.preburn, sep = "_"))
-ub_vegnorare$IAG.preburn_BURN_YR <- as.factor(paste(ub_vegnorare$YEAR, ub_vegnorare$IAG.preburn_BURN, sep = "_"))
 #convert year to factor
 ub_vegnorare$YEAR <- as.factor(ub_vegnorare$YEAR)
 ub_vegnorare$PLOT <- as.factor(ub_vegnorare$PLOT)
@@ -94,75 +107,293 @@ ub_vegnorare$PLOT <- as.factor(ub_vegnorare$PLOT)
 plot
 ```{r}
 plot(nms)
-#ordihull(nms, ub_vegnorare$YEAR, col=1:4, lwd=3)
-#ordiellipse(nms, ub_vegnorare$YEAR, col=1:4, kind = "ehull", lwd=3)
-#ordiellipse(nms, ub_vegnorare$YEAR, col=1:4, draw="polygon", label = TRUE)
-#ordiellipse(nms, ub_vegnorare$BURN17, col=1:4, draw="polygon", label = TRUE)
-#ordiellipse(nms, ub_vegnorare$BURN17, col=1:4, kind = "ehull", lwd=3, label = TRUE)
-#ordiellipse(nms, ub_vegnorare$BURN_YR, col=1:4, kind = "ehull", lwd=3, label = TRUE)
-#ordiellipse(nms, ub_vegnorare$BURN_YR, col=1:4, draw="polygon", label = TRUE)
-# ordiellipse(nms, ub_vegnorare$VEDUcat, col=1:4, draw="polygon", label = TRUE)
-# ordiellipse(nms, ub_vegnorare$VEDUcat, col=1:4, kind = "ehull", lwd=3, label = TRUE)
-#ordiellipse(nms, ub_vegnorare$VEDU_burn, col=1:4, draw="polygon", label = TRUE)
-#ordiellipse(nms, ub_vegnorare$VEDU_burn, col=1:4, kind = "ehull", lwd=3, label = TRUE)
-#ordiellipse(nms, ub_vegnorare$IAGburn_YR, col=1:4, kind = "ehull", lwd=3, label = TRUE)
-# ordiellipse(nms, ub_vegnorare$IAGburn_YR, col=1:4, draw="polygon")
+
 ordiarrows (nms, groups = ub_vegnorare$PLOT, order.by = ub_vegnorare$YEAR, label = FALSE, length = .1, display = "sites")
 
-ordiellipse(nms, ub_vegnorare$IAG.preburn_BURN, col = 1:4, kind="ehull", label = TRUE, show.groups = c("B_0", "B_1", "U_0", "U_1"))
-# ordiellipse(nms, ub_vegnorare$IAG.preburn_BURN_YR, col = 1:4, kind="ehull", label = TRUE, show.groups = c("16_B_0", "16_B_1", "16_U_0", "16_U_1", "20_B_NA", "20_U_NA"))
+ordiellipse(nms, ub_vegnorare$YEAR, col = 1:4, kind="ehull", label = TRUE, show.groups = c(16, 20))
+#ordiellipse(nms, ub_vegnorare$BURN17, col = 1:4, kind="ehull", label = TRUE)
 ```
 
+### NMS with only YR 2016 (pre-fire) & 2020 (3 yrs post fire)
 ```{R with only 16 and 20 data}
 
-sp4nms2 <- ub_vegnorare[which(ub_vegnorare$YEAR == "16" | ub_vegnorare$YEAR == "20"),c(1,6:69)]
+sp4nms2 <- ub_vegnorare[which(ub_vegnorare$YEAR == "16" | ub_vegnorare$YEAR == "20"),c(1,6:54)]
 #set plot to row names 
 rownames(sp4nms2) <- sp4nms2$PLOT_YR 
 sp4nms2$PLOT_YR  <- NULL 
 
-nms2 <- metaMDS(sp4nms2, distance='bray', k=2, trymax=50, autotransform=FALSE, wasscores=TRUE, noshare=FALSE) 
+nms2 <- metaMDS(sqrt(sp4nms2), distance='bray', k=2, trymax=50, autotransform=FALSE, wasscores=TRUE, noshare=FALSE) 
+```
 
+
+
+```{r}
 ub_vegnorare2 <- ub_vegnorare[which(ub_vegnorare$YEAR == 16 | ub_vegnorare$YEAR == 20),]
 
+ub_vegnorare2$BURN2 <- ub_vegnorare2$BURN17
+ub_vegnorare2$BURN2[which(ub_vegnorare2$BURN2 == "c_unburned")] <- "unburned"
+
+ub_vegnorare2$BURN2_YR <- paste(ub_vegnorare2$BURN2, ub_vegnorare2$YEAR, sep = "_")
 
 ```
+
 ```{r}
 #extract scores to plot with vectors
 speciesScores <- nms2$species
 siteScores <- nms2$points
 
-ub_vegnorare2_scores <- cbind(ub_vegnorare2, data.frame(siteScores))
+siteScores_burn <- cbind(data.frame(siteScores), ub_vegnorare2[,"BURN2"])
+
+species <- rownames(speciesScores)
+```
+
+
+```{r fig.height=8, fig.width=8}
+plot(nms2, type = "n")
+
+with(ub_vegnorare2, points(nms2, display = "sites", col = c("#606c38", "#dda15e", "#bc6c25")[BURN2], cex=1.25, pch = c(16, 17)[YEAR]))
+
+
+ordiellipse(nms2, ub_vegnorare2$BURN2_YR,
+            scaling = 3, label = FALSE, draw = "polygon",
+            col = c("#dda15e", "red",  "#606c38"),
+            kind = "sd",
+            alpha = 30,
+            show.groups = c("unburned_20", "<50_20", ">50_20"),
+            border = "white")
+
+# ordihull(nms2, ub_vegnorare2$BURN2_YR,
+#             scaling = 3, label = FALSE, draw = "polygon",
+#             col = c("#dda15e", "red",  "#606c38"),
+#             #kind = "ehull",
+#             alpha = 20,
+#             show.groups = c("unburned_20", "<50_20", ">50_20"),
+#             border = "white")
+
+# ordihull(nms2, ub_vegnorare2$YEAR,
+#             scaling = 3, label = FALSE, draw = "polygon",
+#             col = c("blue", "red"),
+#             #kind = "ehull",
+#             alpha = 20,
+#             #show.groups = c("unburned_20", "<50_20", ">50_20"),
+#             border = "white")
+
+# ordiellipse(nms2, ub_vegnorare2$BURN2_YR,
+#             scaling = 3, label = FALSE, draw = "polygon",
+#             col = c("#dda15e", "red",  "#606c38"),
+#             kind = "sd",
+#             alpha = 20,
+#             show.groups = c("unburned_20", "<50_20", ">50_20"),
+#             border = "white")
+
+#arrows(0, 0, variableScores[, 1], variableScores[, 2], length=0.1, angle=20, col ="grey")
+
+
+#add species points
+points(speciesScores[, 1], speciesScores[, 2], pch=17, cex=0.75, col="grey")
+
+ordiarrows (nms2, groups = ub_vegnorare2$PLOT, order.by = ub_vegnorare2$YEAR, 
+            label = FALSE, length = .1, 
+            display = "sites", col = "black")
+
+#set text
+#wordcloud::textplot(speciesScores[, 1], speciesScores[, 2], species)
+text(speciesScores[, 1], speciesScores[, 2], pos = 3, offset = 0.5, col = "black", font = 2, rownames(speciesScores), cex=0.7)
+
+#text(siteScores_burn[, 1], siteScores_burn[, 2], pos = 3, offset = 0.5, col = "black", font = 2, rownames(siteScores_burn), cex=0.7)
+
+```
+
+### NMS with only YR 2016 (pre-fire) & 2020 (3 yrs post fire) by functional group
+```{R with only 16 and 20 data}
+funcdf$BURN2 <- funcdf$BURN17
+funcdf$BURN2[which(funcdf$BURN2 == "c_unburned")] <- "unburned"
+
+funcdf$BURN2_YR <- paste(funcdf$BURN2, funcdf$YEAR, sep = "_")
+
+#subset dataframe for pre and post fire data
+sp4nmsfunc <- funcdf[which(funcdf$YEAR == 16 | funcdf$YEAR == 20), 1:12]
+
+#remove canopy "tree"
+sp4nmsfunc <- sp4nmsfunc[,-12]
+
+#set plot to row names 
+rownames(sp4nmsfunc) <- sp4nmsfunc$PLOT_YR 
+sp4nmsfunc$PLOT_YR  <- NULL 
+
+nmsfunc <- metaMDS(sqrt(sp4nmsfunc), distance='bray', k=2, trymax=50, autotransform=FALSE, wasscores=TRUE, noshare=FALSE) 
+
+```
+```{r}
+funcdf_sub <- funcdf[which(funcdf$YEAR == 16 | funcdf$YEAR == 20),]
+
+funcdf_sub$YEAR <- factor(funcdf_sub$YEAR)
+funcdf_sub$BURN2 <- factor(funcdf_sub$BURN2, levels = c("unburned", "<50", ">50"))
+
+#rotate to weigh invasive annual grasses on x axis
+nmsfunc_rot <- with(funcdf_sub, MDSrotate(nmsfunc, Annual.Graminoid.Invasive))
 ```
 
 
 ```{r}
-plot(nms2)
+#extract scores to plot with vectors
 
-ordiarrows (nms2, groups = ub_vegnorare2$PLOT, order.by = ub_vegnorare2$YEAR, label = FALSE, length = .1, display = "sites")
+speciesScoresFunc <- nmsfunc_rot$species
+siteScoresFunc <- nmsfunc_rot$points
 
-ordiellipse(nms2, ub_vegnorare2$IAG.preburn_BURN,
-            scaling = 3, label = TRUE, draw = "polygon",
-            col = c("green", "blue", "yellow", "red"),
+siteScores_burnFunc <- cbind(data.frame(siteScoresFunc), funcdf_sub[, c("BURN2", "YEAR")])
+
+speciesFunc <- rownames(speciesScoresFunc)
+```
+
+plot nms functional groups (POST FIRE - 2020)
+```{r fig.height=8, fig.width=8}
+plot(nmsfunc_rot, type = "n")
+
+
+with(funcdf_sub, points(nmsfunc_rot, display = "sites", col = c("#606c38", "#dda15e", "#bc6c25")[BURN2], cex=1.25, pch = c(16, 17)[YEAR]))
+
+
+ordiellipse(nmsfunc_rot, funcdf_sub$BURN2_YR,
+            scaling = 3, label = FALSE, draw = "polygon",
+            col = c("#dda15e", "red",  "#606c38"),
             kind = "sd",
-            alpha = 70,
-            border = c("green", "blue", "yellow", "red"),
-            show.groups = c("B_0", "B_1", "U_0", "U_1"))
+            alpha = 40,
+            show.groups = c("unburned_20", "<50_20", ">50_20"),
+            border = "white")
+
+arrows(0, 0, speciesScoresFunc[, 1], speciesScoresFunc[, 2], length=0.1, angle=20, col ="black")
+
+#set text
+text(speciesScoresFunc[, 1], speciesScoresFunc[, 2], pos = 3, offset = 0.5, col = "black", font = 2, rownames(speciesScoresFunc), cex=0.7)
+
+# ordihull(nmsfunc, funcdf_sub$BURN2_YR,
+#             scaling = 3, label = FALSE, draw = "polygon",
+#             col = c("#dda15e", "red",  "#606c38"),
+#             #kind = "ehull",
+#             alpha = 20,
+#             show.groups = c("unburned_16", "<50_16", ">50_16"),
+#             border = "white")
+
+# ordihull(nmsfunc, funcdf$YEAR,
+#             scaling = 3, label = FALSE, draw = "polygon",
+#             col = c("blue", "red"),
+#             #kind = "ehull",
+#             alpha = 20,
+#             #show.groups = c("unburned_20", "<50_20", ">50_20"),
+#             border = "white")
+
+# ordiellipse(nms2, ub_vegnorare2$BURN2_YR,
+#             scaling = 3, label = FALSE, draw = "polygon",
+#             col = c("#dda15e", "red",  "#606c38"),
+#             kind = "sd",
+#             alpha = 20,
+#             show.groups = c("unburned_20", "<50_20", ">50_20"),
+#             border = "white")
 
 #arrows(0, 0, variableScores[, 1], variableScores[, 2], length=0.1, angle=20, col ="grey")
 
-points(ub_vegnorare2_scores[, 81], ub_vegnorare2_scores[, 82], pch=16, cex=0.7, col="#666666")
+#add species points
+#points(speciesScoresFunc[, 1], speciesScoresFunc[, 2], pch=15, cex=0.75, col="grey")
+
+#add ordi-arrows from pre to post fire
+# ordiarrows (nmsfunc, groups = funcdf_sub$PLOT, order.by = funcdf_sub$YEAR,
+#             label = FALSE, 
+#             length = .1,
+#             display = "sites", col = "black")
+```
+plot nms functional groups (YEAR 2016 - prefire)
+```{r fig.height=8, fig.width=8}
+plot(nmsfunc_rot, type = "n")
+
+with(funcdf_sub, points(nmsfunc_rot, display = "sites", col = c("#606c38", "#dda15e", "#bc6c25")[BURN2], cex=1.25, pch = c(16, 17)[YEAR]))
 
 
-points(speciesScores[, 1], speciesScores[, 2], pch=16, cex=0.7, col="grey")
+ordiellipse(nmsfunc_rot, funcdf_sub$BURN2_YR,
+            scaling = 3, label = FALSE, draw = "polygon",
+            col = c("#dda15e", "red",  "#606c38"),
+            kind = "sd",
+            alpha = 40,
+            show.groups = c("unburned_16", "<50_16", ">50_16"),
+            border = "white")
+
+#add arrows for functional groups
+arrows(0, 0, speciesScoresFunc[, 1], speciesScoresFunc[, 2], length=0.1, angle=20, col ="black")
+
 #set text
-text(speciesScores[, 1], speciesScores[, 2], pos = 3, offset = 0.5, col = "black", font = 2, rownames(speciesScores), cex=0.7)
+text(speciesScoresFunc[, 1], speciesScoresFunc[, 2], pos = 3, offset = 0.5, col = "black", font = 2, rownames(speciesScoresFunc), cex=0.7)
+
+# ordihull(nmsfunc, funcdf_sub$BURN2_YR,
+#             scaling = 3, label = FALSE, draw = "polygon",
+#             col = c("#dda15e", "red",  "#606c38"),
+#             #kind = "ehull",
+#             alpha = 20,
+#             show.groups = c("unburned_20", "<50_20", ">50_20"),
+#             border = "white")
+
+# ordihull(nmsfunc, funcdf$YEAR,
+#             scaling = 3, label = FALSE, draw = "polygon",
+#             col = c("blue", "red"),
+#             #kind = "ehull",
+#             alpha = 20,
+#             #show.groups = c("unburned_20", "<50_20", ">50_20"),
+#             border = "white")
+
+# ordiellipse(nms2, ub_vegnorare2$BURN2_YR,
+#             scaling = 3, label = FALSE, draw = "polygon",
+#             col = c("#dda15e", "red",  "#606c38"),
+#             kind = "sd",
+#             alpha = 20,
+#             show.groups = c("unburned_20", "<50_20", ">50_20"),
+#             border = "white")
+
+#add species points
+#points(speciesScoresFunc[, 1], speciesScoresFunc[, 2], pch=15, cex=0.75, col="grey")
+
+#add ordi-arrows from pre to post fire
+# ordiarrows (nmsfunc, groups = funcdf_sub$PLOT, order.by = funcdf_sub$YEAR,
+#             label = FALSE, 
+#             length = .1,
+#             display = "sites", col = "black")
+```
 
 
- 
-# ordiellipse(nms, ub_vegnorare$IAG.preburn_BURN_YR, col = 1:4, kind="ehull", label = TRUE, show.groups = c("16_B_0", "16_B_1", "16_U_0", "16_U_1", "20_B_NA", "20_U_NA"))
+
+## Plot with ggplot
+
+```{r}
+siteScores.df <- siteScores_burnFunc
+siteScores.df$plot_yr <- rownames(siteScores.df)
+siteScores.df$YEAR <- factor(siteScores.df$YEAR)
+
+
+speciesScores.df <- data.frame(speciesScoresFunc)
+speciesScores.df$species <- rownames(speciesScores.df)
+head(speciesScores.df)
+```
+
+```{r fig.height=6, fig.width=6}
+library(ggrepel)
+library(ggordiplots)
+ggplot() +
+  # gg_ordiplot(nmsfunc,
+  #             groups = c(funcdf_sub$BURN2, funcdf_sub$YEAR),
+  #             kind = "sd")
+  geom_point(data=speciesScores.df,aes(x=MDS1,y=MDS2), col = "grey", size=2, pch = 17) + # add the point markers
+  geom_point(data=siteScores.df,aes(x=MDS1,y=MDS2, colour=BURN2, shape = YEAR),size=3) + # add the point markers
+  geom_text_repel(data=speciesScores.df, aes(x=MDS1,y=MDS2,label=species), alpha=0.5, size = 3, force = 1) + # add the species labels
+  #geom_text(data=data.scores,aes(x=NMDS1,y=NMDS2,label=site),size=6,vjust=0) +  # add the site labels
+  scale_colour_manual(values=c("unburned" = "#606c38", "<50" = "#dda15e", ">50" = "#bc6c25")) +
+  coord_equal() +
+  theme_bw(base_size = 13) +
+  theme(panel.grid.major = element_blank(), panel.grid.minor = element_blank())
+
+
 
 
 ```
+
+
 Calculate trajectories
 ```{r}
 library(vegclust)
