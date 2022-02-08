@@ -39,14 +39,11 @@ func <- merge(df, sp)
 # spname %in% sp$CT_CODE #looks good!
 
 
-#add new group for functional group
-func$funcgroup <- paste(func$duration, func$habit, func$status, sep = ".")
-
 #add cover by plot for each functional group
 
-func_sum <- func %>% group_by(PLOT_YR, funcgroup) %>%
+func_sum <- func %>% group_by(PLOT_YR, functionalGroup) %>%
               summarise(funcSum = sum(cover)) %>%
-              spread(., funcgroup, funcSum)
+              spread(., functionalGroup, funcSum)
 
 funcdf <- merge(func_sum, ub_veg[,1:5])
 
@@ -93,9 +90,6 @@ sp4nms$PLOT_YR  <- NULL
 
 nms <- metaMDS(sqrt(sp4nms), distance='bray', k=2, trymax=50, autotransform=FALSE, wasscores=TRUE, noshare=FALSE) 
 ```
-
-
-
 
 
 ```{r}
@@ -211,11 +205,13 @@ funcdf$BURN2[which(funcdf$BURN2 == "c_unburned")] <- "unburned"
 
 funcdf$BURN2_YR <- paste(funcdf$BURN2, funcdf$YEAR, sep = "_")
 
-#subset dataframe for pre and post fire data
-sp4nmsfunc <- funcdf[which(funcdf$YEAR == 16 | funcdf$YEAR == 20), 1:12]
-
 #remove canopy "tree"
-sp4nmsfunc <- sp4nmsfunc[,-12]
+funcdf <- funcdf[,-11]
+
+#subset dataframe for pre and post fire data
+sp4nmsfunc <- funcdf[which(funcdf$YEAR == 16 | funcdf$YEAR == 20), 1:10]
+
+
 
 #set plot to row names 
 rownames(sp4nmsfunc) <- sp4nmsfunc$PLOT_YR 
@@ -224,6 +220,7 @@ sp4nmsfunc$PLOT_YR  <- NULL
 nmsfunc <- metaMDS(sqrt(sp4nmsfunc), distance='bray', k=2, trymax=50, autotransform=FALSE, wasscores=TRUE, noshare=FALSE) 
 
 ```
+
 ```{r}
 funcdf_sub <- funcdf[which(funcdf$YEAR == 16 | funcdf$YEAR == 20),]
 
@@ -231,7 +228,7 @@ funcdf_sub$YEAR <- factor(funcdf_sub$YEAR)
 funcdf_sub$BURN2 <- factor(funcdf_sub$BURN2, levels = c("unburned", "<50", ">50"))
 
 #rotate to weigh invasive annual grasses on x axis
-nmsfunc_rot <- with(funcdf_sub, MDSrotate(nmsfunc, Annual.Graminoid.Invasive))
+nmsfunc_rot <- with(funcdf_sub, MDSrotate(nmsfunc, Invasive.Annual.Grass))
 ```
 
 
@@ -246,64 +243,12 @@ siteScores_burnFunc <- cbind(data.frame(siteScoresFunc), funcdf_sub[, c("BURN2",
 speciesFunc <- rownames(speciesScoresFunc)
 ```
 
-plot nms functional groups (POST FIRE - 2020)
-```{r fig.height=8, fig.width=8}
-plot(nmsfunc_rot, type = "n")
+plot nms functional groups
+```{r fig.height=6, fig.width=12}
+svg("functionalGroupNMS.svg", width = 11, height = 6)
 
+par(mfrow=c(1,2))
 
-with(funcdf_sub, points(nmsfunc_rot, display = "sites", col = c("#606c38", "#dda15e", "#bc6c25")[BURN2], cex=1.25, pch = c(16, 17)[YEAR]))
-
-
-ordiellipse(nmsfunc_rot, funcdf_sub$BURN2_YR,
-            scaling = 3, label = FALSE, draw = "polygon",
-            col = c("#dda15e", "red",  "#606c38"),
-            kind = "sd",
-            alpha = 40,
-            show.groups = c("unburned_20", "<50_20", ">50_20"),
-            border = "white")
-
-arrows(0, 0, speciesScoresFunc[, 1], speciesScoresFunc[, 2], length=0.1, angle=20, col ="black")
-
-#set text
-text(speciesScoresFunc[, 1], speciesScoresFunc[, 2], pos = 3, offset = 0.5, col = "black", font = 2, rownames(speciesScoresFunc), cex=0.7)
-
-# ordihull(nmsfunc, funcdf_sub$BURN2_YR,
-#             scaling = 3, label = FALSE, draw = "polygon",
-#             col = c("#dda15e", "red",  "#606c38"),
-#             #kind = "ehull",
-#             alpha = 20,
-#             show.groups = c("unburned_16", "<50_16", ">50_16"),
-#             border = "white")
-
-# ordihull(nmsfunc, funcdf$YEAR,
-#             scaling = 3, label = FALSE, draw = "polygon",
-#             col = c("blue", "red"),
-#             #kind = "ehull",
-#             alpha = 20,
-#             #show.groups = c("unburned_20", "<50_20", ">50_20"),
-#             border = "white")
-
-# ordiellipse(nms2, ub_vegnorare2$BURN2_YR,
-#             scaling = 3, label = FALSE, draw = "polygon",
-#             col = c("#dda15e", "red",  "#606c38"),
-#             kind = "sd",
-#             alpha = 20,
-#             show.groups = c("unburned_20", "<50_20", ">50_20"),
-#             border = "white")
-
-#arrows(0, 0, variableScores[, 1], variableScores[, 2], length=0.1, angle=20, col ="grey")
-
-#add species points
-#points(speciesScoresFunc[, 1], speciesScoresFunc[, 2], pch=15, cex=0.75, col="grey")
-
-#add ordi-arrows from pre to post fire
-# ordiarrows (nmsfunc, groups = funcdf_sub$PLOT, order.by = funcdf_sub$YEAR,
-#             label = FALSE, 
-#             length = .1,
-#             display = "sites", col = "black")
-```
-plot nms functional groups (YEAR 2016 - prefire)
-```{r fig.height=8, fig.width=8}
 plot(nmsfunc_rot, type = "n")
 
 with(funcdf_sub, points(nmsfunc_rot, display = "sites", col = c("#606c38", "#dda15e", "#bc6c25")[BURN2], cex=1.25, pch = c(16, 17)[YEAR]))
@@ -321,77 +266,104 @@ ordiellipse(nmsfunc_rot, funcdf_sub$BURN2_YR,
 arrows(0, 0, speciesScoresFunc[, 1], speciesScoresFunc[, 2], length=0.1, angle=20, col ="black")
 
 #set text
-text(speciesScoresFunc[, 1], speciesScoresFunc[, 2], pos = 3, offset = 0.5, col = "black", font = 2, rownames(speciesScoresFunc), cex=0.7)
+text(speciesScoresFunc[, 1], speciesScoresFunc[, 2], pos = 3, offset = 0.5, col = "black", font = 2, rownames(speciesScoresFunc), cex=0.8)
 
-# ordihull(nmsfunc, funcdf_sub$BURN2_YR,
-#             scaling = 3, label = FALSE, draw = "polygon",
-#             col = c("#dda15e", "red",  "#606c38"),
-#             #kind = "ehull",
-#             alpha = 20,
-#             show.groups = c("unburned_20", "<50_20", ">50_20"),
-#             border = "white")
+#--------------------------------------------------------------------
 
-# ordihull(nmsfunc, funcdf$YEAR,
-#             scaling = 3, label = FALSE, draw = "polygon",
-#             col = c("blue", "red"),
-#             #kind = "ehull",
-#             alpha = 20,
-#             #show.groups = c("unburned_20", "<50_20", ">50_20"),
-#             border = "white")
+# plot post-fire (same NMS with 2020 ellipses)
 
-# ordiellipse(nms2, ub_vegnorare2$BURN2_YR,
-#             scaling = 3, label = FALSE, draw = "polygon",
-#             col = c("#dda15e", "red",  "#606c38"),
-#             kind = "sd",
-#             alpha = 20,
-#             show.groups = c("unburned_20", "<50_20", ">50_20"),
-#             border = "white")
+plot(nmsfunc_rot, type = "n")
+
+
+with(funcdf_sub, points(nmsfunc_rot, display = "sites", col = c("#606c38", "#dda15e", "#bc6c25")[BURN2], cex=1.25, pch = c(16, 17)[YEAR]))
+
+
+ordiellipse(nmsfunc_rot, funcdf_sub$BURN2_YR,
+            scaling = 3, label = FALSE, draw = "polygon",
+            col = c("#dda15e", "red",  "#606c38"),
+            kind = "sd",
+            alpha = 40,
+            show.groups = c("unburned_20", "<50_20", ">50_20"),
+            border = "white")
+
+arrows(0, 0, speciesScoresFunc[, 1], speciesScoresFunc[, 2], length=0.1, angle=20, col ="black")
+
+#set text
+text(speciesScoresFunc[, 1], speciesScoresFunc[, 2], pos = 3, offset = 0.5, col = "black", font = 2, rownames(speciesScoresFunc), cex=0.8)
+
+#arrows(0, 0, variableScores[, 1], variableScores[, 2], length=0.1, angle=20, col ="grey")
 
 #add species points
 #points(speciesScoresFunc[, 1], speciesScoresFunc[, 2], pch=15, cex=0.75, col="grey")
 
-#add ordi-arrows from pre to post fire
-# ordiarrows (nmsfunc, groups = funcdf_sub$PLOT, order.by = funcdf_sub$YEAR,
-#             label = FALSE, 
+# #add ordi-arrows from pre to post fire
+# ordiarrows (nmsfunc_rot, groups = funcdf_sub$PLOT, order.by = funcdf_sub$YEAR,
+#             label = FALSE,
 #             length = .1,
-#             display = "sites", col = "black")
+#             display = "sites", col = "grey")
+
+dev.off()
 ```
 
 
 
-## Plot with ggplot
-
+Compare groups with MRPP
 ```{r}
-siteScores.df <- siteScores_burnFunc
-siteScores.df$plot_yr <- rownames(siteScores.df)
-siteScores.df$YEAR <- factor(siteScores.df$YEAR)
+sp4nmsfunc16 <- sp4nmsfunc[1:37,]
+sp4nmsfunc20 <- sp4nmsfunc[38:74,]
 
+func.mrpp16 <- with(funcdf_sub[which(funcdf_sub$YEAR == 16),], mrpp(sp4nmsfunc16, BURN2, distance = "bray"))
+func.mrpp16
 
-speciesScores.df <- data.frame(speciesScoresFunc)
-speciesScores.df$species <- rownames(speciesScores.df)
-head(speciesScores.df)
+func.mrpp20 <- with(funcdf_sub[which(funcdf_sub$YEAR == 20),], mrpp(sp4nmsfunc20, BURN2, distance = "bray"))
+func.mrpp20
+
+#explore means
+func.md16 <- with(funcdf_sub[which(funcdf_sub$YEAR == 16),], meandist(vegdist(sp4nmsfunc16), BURN2, distance = "bray"))
+summary(func.md16)
+
+plot(func.md16, kind = "histogram")
+
+func.md20 <- with(funcdf_sub[which(funcdf_sub$YEAR == 20),], meandist(vegdist(sp4nmsfunc20), BURN2, distance = "bray"))
+summary(func.md20)
+
+plot(func.md20, kind = "histogram")
 ```
 
-```{r fig.height=6, fig.width=6}
-library(ggrepel)
-library(ggordiplots)
-ggplot() +
-  # gg_ordiplot(nmsfunc,
-  #             groups = c(funcdf_sub$BURN2, funcdf_sub$YEAR),
-  #             kind = "sd")
-  geom_point(data=speciesScores.df,aes(x=MDS1,y=MDS2), col = "grey", size=2, pch = 17) + # add the point markers
-  geom_point(data=siteScores.df,aes(x=MDS1,y=MDS2, colour=BURN2, shape = YEAR),size=3) + # add the point markers
-  geom_text_repel(data=speciesScores.df, aes(x=MDS1,y=MDS2,label=species), alpha=0.5, size = 3, force = 1) + # add the species labels
-  #geom_text(data=data.scores,aes(x=NMDS1,y=NMDS2,label=site),size=6,vjust=0) +  # add the site labels
-  scale_colour_manual(values=c("unburned" = "#606c38", "<50" = "#dda15e", ">50" = "#bc6c25")) +
-  coord_equal() +
-  theme_bw(base_size = 13) +
-  theme(panel.grid.major = element_blank(), panel.grid.minor = element_blank())
 
-
-
+plot with ggplot
+```{r}
+# siteScores.df <- siteScores_burnFunc
+# siteScores.df$plot_yr <- rownames(siteScores.df)
+# siteScores.df$YEAR <- factor(siteScores.df$YEAR)
+# 
+# 
+# speciesScores.df <- data.frame(speciesScoresFunc)
+# speciesScores.df$species <- rownames(speciesScores.df)
+# head(speciesScores.df)
+# ```
+# 
+# ```{r fig.height=6, fig.width=6}
+# library(ggrepel)
+# library(ggordiplots)
+# ggplot() +
+#   # gg_ordiplot(nmsfunc,
+#   #             groups = c(funcdf_sub$BURN2, funcdf_sub$YEAR),
+#   #             kind = "sd")
+#   geom_point(data=speciesScores.df,aes(x=MDS1,y=MDS2), col = "grey", size=2, pch = 17) + # add the point markers
+#   geom_point(data=siteScores.df,aes(x=MDS1,y=MDS2, colour=BURN2, shape = YEAR),size=3) + # add the point markers
+#   geom_text_repel(data=speciesScores.df, aes(x=MDS1,y=MDS2,label=species), alpha=0.5, size = 3, force = 1) + # add the species labels
+#   #geom_text(data=data.scores,aes(x=NMDS1,y=NMDS2,label=site),size=6,vjust=0) +  # add the site labels
+#   scale_colour_manual(values=c("unburned" = "#606c38", "<50" = "#dda15e", ">50" = "#bc6c25")) +
+#   coord_equal() +
+#   theme_bw(base_size = 13) +
+#   theme(panel.grid.major = element_blank(), panel.grid.minor = element_blank())
+# 
+# 
+# 
 
 ```
+
 
 
 Calculate trajectories

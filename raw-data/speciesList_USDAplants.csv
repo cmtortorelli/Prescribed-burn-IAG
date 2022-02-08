@@ -1,112 +1,112 @@
-CT_CODE,USDA,latinName,commonName,duration,habit,status
-ACHNATH,ACHNA,Achnatherum spp.,needlegrass,Perennial,Graminoid,Native
-ACMI,ACMI2,Achillea millefolium,common yarrow,Perennial,Forb,Native
-ACOC,ACOC3,Achnatherum occidentale,western needlegrass,Perennial,Graminoid,Native
-AGGR,AGGR,Agoseris grandiflora,bigflower agoseris,Perennial,Forb,Native
-AGHE,AGHE2,Agoseris heterophylla,annual agoseris,Annual,Forb,Native
-AGIN,APIN,Apera interrupta,dense silkybent,Annual,Graminoid,Invasive
-ALAC,ALAC4,Allium acuminatum,tapertip onion,Perennial,Forb,Native
-ALAL,ALAL3,Alyssum alyssoides,pale madwort,Annual,Forb,Invasive
-ANFL,ANFL2,Antennaria flagellaris,whip pussytoes,Perennial,Forb,Native
-ANLU,ANLU2,Antennaria luzuloides,rush pussytoes,Perennial,Forb,Native
-ARABIS,ARABI2,Arabis spp.,rockgress,Perennial,Forb,Native
-ARAC,ARAC2,Arenaria aculeata,prickly sandwort,Perennial,Forb,Native
-ARCO,ARCO9,Arnica cordifolia,heartleaf arnica,Perennial,Forb,Native
-ARRI,ARRI2,Artemesia rigida,scabland sagebrush,Perennial,Shrub,Native
-ARSO,ARSO2,Arnica sororia,twin arnica,Perennial,Forb,Native
-ASTERACEAE,Asteraceae,Asteraceae,Unknown sunflower,Perennial,Forb,Native
-BASA,BASA3,Balsamorhiza sagittata,arrowleaf balsamroot,Perennial,Forb,Native
-BLSC,BLSC,Blepharipappus scaber,rough eyelashweed,Annual,Forb,Native
-BRCA,BRCA5,Bromus carinatus,California brome,Perennial,Graminoid,Native
-BRJA,BRAR5,Bromus japonicus,field brome,Annual,Graminoid,Invasive
-BRTE,BRTE,Bromus tectorum,cheatgrass,Annual,Graminoid,Invasive
-CAEU,CAEU,Calochortus eurycarpus,white mariposa lily,Perennial,Forb,Native
-CAGE,CAGE2,Carex geyeri,Geyer's sedge,Perennial,Graminoid,Native
-CARU,CARU,Calamagrostis rubescens,pinegrass,Perennial,Graminoid,Native
-CATE,CATE26,Castilleja tenuis,hairy Indian paintbrush,Annual,Forb,Native
-CELE,CELE3,Cercocarpus ledifolius,curl-leaf mountain mahogany,Perennial,Shrub,Native
-CLPE,CLPE,Claytonia perfoliata,miner's lettuce,Perennial,Forb,Native
-CLPU,CLPU,Clarkia pulchella,pinkfairies,Annual,Forb,Native
-COGR,COGR4,Collomia grandiflora,grand collomia,Annual,Forb,Native
-COLLOMIA,COLLO,Collomia sp.,trumpet,Annual,Forb,Native
-COPA,COPA3,Collinsia parviflora,maiden blue eyed Mary,Annual,Forb,Native
-CREPIS,CREPI,Crepis sp.,hawksbeard,Perennial,Forb,Native
-CROC,CROC,Crepis occidentalis,largeflower hawksbeard,Annual,Forb,Native
-CRYPTANTHA,CRYPT,Cryptantha sp.,cryptantha,Annual,Forb,Native
-CYFR,CYFR2,Cystopteris fragilis,brittle bladderfern,Perennial,Forb,Native
-DAUN,DAUN,Danthonia unispicata,onespike danthonia,Perennial,Graminoid,Native
-DECA,DECE,Deschampsia cespitosa,tufted hairgrass,Perennial,Graminoid,Native
-DEDA,DEDA,Deschampsia danthonioides,annual hairgrass,Annual,Graminoid,Native
-DELPHINIUM,DELPH,Delphinium sp.,larkspur,Perennial,Forb,Native
-DODECATHEON,DODEC,Dodecatheon sp.,shootingstar,Perennial,Forb,Native
-DRVE,DRVE2,Draba verna,spring draba,Annual,Forb,Invasive
-ELEL,ELEL5,Elymus elymoides,squirreltail,Perennial,Graminoid,Native
-EPBR,EPBR3,Epilobium brachycarpum,tall annual willowherb,Annual,Forb,Native
-ERHE,ERHE2,Eriogonum heracleoides,parsnipflower buckwheat,Perennial,Forb,Native
-ERIGERON,ERIGE2,Erigeron sp.,fleabane,Perennial,Forb,Native
-ERIOGONUM,ERIOG,Eriogonum sp.,buckwheat,Perennial,Subshrub,Native
-ERNA,ERNA10,Ericameria nauseosa,rubber rabbitbrush,Perennial,Shrub,Native
-FEID,FEID,Festuca idahoensis,Idaho fescue,Perennial,Graminoid,Native
-FRAGARIA,FRAGA,Fragaria sp.,strawberry,Perennial,Forb,Native
-GAAP,GAAP2,Galium aparine,stickywilly,Annual,Forb,Native
-GAYOPHYTUM,GAYOP,Gayophytum sp,groundsmoke,Annual,Forb,Native
-GETR,GETR,Geum triflorum,old man's whiskers,Perennial,Forb,Native
-GUSA,GUSA2,Gutierrezia sarothrae,broom snakeweed,Perennial,Subshrub,Native
-HIERACIUM,HIERA,Hieracium sp.,hawkweed,Perennial,Forb,Native
-HOUM,HOUM,Holosteum umbellatum,jagged chickweed,Annual,Forb,Invasive
-JUNCUS,JUNCU,Juncus sp.,rush,Perennial,Graminoid,Native
-JUOC,JUOC,Juniperus occidentalis,western juniper,Perennial,Tree,Native
-LELI,LEPTO22,Leptosiphon sp.,leptosiphon,Annual,Forb,Native
-LILIACEAE,Lilicaeae,Liliaceae,Unknown Lily,Perennial,Forb,Native
-LIMI,HEMI9,Hesperolinon micranthum,smallflower dwarf-flax,Annual,Forb,Native
-LIRU,LIRU4,Lithospermum ruderale,western stoneseed,Perennial,Forb,Native
-LITHOPHRAGMA,LITHO2,Lithophragma sp.,woodland-star,Perennial,Forb,Native
-LOLE,LOBIL,Lomatium leptocarpum,Wasatch desertparsley,Perennial,Forb,Native
-LOMATIUM,LOMAT,Lomatium sp.,desertparsley,Perennial,Forb,Native
-LONU,LONU2,Lomatium nudicaule,barestem biscuitroot,Perennial,Forb,Native
-LUPINUS,LUPIN,Lupinus sp.,lupine,Perennial,Forb,Native
-MAGR,MAGR3,Madia gracilis,grassy tarweed,Annual,Forb,Native
-MAMI,HEMI20,Hemizonella minima,opposite-leaved tarweed,Annual,Forb,Native
-MARE,MARE11,Mahonia repens,creeping barberry,Perennial,Subshrub,Native
-MENTZELIA,MEDI,Mentzelia dispersa,bushy blazingstar,Annual,Forb,Native
-MIGR,MIGR,Microsteris gracilis,slender phlox,Annual,Forb,Native
-MYST,MYST2,Myosotis stricta,strict forget-me-not,Annual,Forb,Invasive
-NAVARRETIA,NAVAR,Navarretia sp.,pincushion plant,Annual,Forb,Native
-NEPA,NEPA,Nemophila parviflora,smallflower nemophila,Annual,Forb,Native
-NOTR,NOTR2,Nothocalais troximoides,sagebrush false dandelion,Perennial,Forb,Native
-OLDO,OLDO,Olsynium douglasii ,Douglas' grasswidow,Perennial,Forb,Native
-ORUN,ORUN,Orobanche uniflora,oneflowered broomrape,Annual,Forb,Native
-OSBE,OSBE,Osmorhiza berteroi,sweetcicely,Perennial,Forb,Native
-PENSTEMON,PENST,Penstemon spp.,beardtongue,Perennial,Forb,Native
-PHCH,PHCH,Phoenicaulis cheiranthoides,wallflower phoenicaulis,Perennial,Forb,Native
-PHLOX,PHLOX,Phlox sp,phlox,Perennial,Forb,Native
-PIPO,PIPO,Pinus ponderosa,ponderosa pine,Perennial,Tree,Native
-POACEAE,Poaceae,Poaceae,Unknown Grass,Perennial,Graminoid,Native
-POBU,POBU,Poa bulbosa,bulbous bluegrass,Perennial,Graminoid,Invasive
-POGL,POGL9,Drymocallis glandulosa,sticky cinquefoil,Perennial,Subshrub,Native
-POPO,POPO4,Polygonum polygaloides,milkwort knotweed,Annual,Forb,Native
-PODO,PODO4,Polygonum douglasii,Douglas' knotweed,Annual,Forb,Native
-POPR,POPR,Poa pratensis,Kentucky bluegrass,Perennial,Graminoid,Invasive
-POSE,POSE,Poa secunda,Sandberg bluegrass,Perennial,Graminoid,Native
-PSME,PSME,Pseudotsuga menziesii,Douglas-fir,Perennial,Tree,Native
-PSSP,PSSP6,Pseudoroegneria spicata,bluebunch wheatgrass,Perennial,Graminoid,Native
-PUTR,PUTR2,Purshia tridentata,antelope bitterbrush,Perennial,Shrub,Native
-RIBES,RIBES,Ribes sp.,currant,Perennial,Shrub,Native
-ROSA,ROSA5,Rosa spp.,rose,Perennial,Shrub,Native
-RUAC,RUAC3,Rumex acetosella,common sheep sorrel,Perennial,Forb,Invasive
-SAXIFRAGACEAE,Saxifragaceae,Saxifragaceae,Unknown saxifrage,Perennial,Forb,Native
-SCUTELLARIA,SCUTE,Scutellaria spp.,Scullcap,Perennial,Forb,Native
-SEST,SEST2,Sedum stenopetalum,wormleaf stonecrop,Perennial,Forb,Native
-SIOR,SIOR,Sidalcea oregana,Oregon checkerbloom,Perennial,Forb,Native
-SOCA,SOCA6,Solidago canadensis,Canada goldenrod,Perennial,Forb,Native
-SYAL,SYAL,Symphoricarpos albus,common snowberry,Perennial,Shrub,Native
-SYMPHORYCARPUS,SYMPH,Symphoricarpos ,snowberry,Perennial,Shrub,Native
-THALICTRUM,THALI2,Thalictrum sp.,meadow-rue,Perennial,Forb,Native
-THIN,THIN6,Agropyron intermedium,intermediate wheatgrass,Perennial,Graminoid,Invasive
-TRCY,TRCY,Trifolium cyathiferum,cup clover,Annual,Forb,Native
-TRDU,TRDU,Tragopogon dubius,yellow salsify,Annual,Forb,Invasive
-TRMA,TRMA3,Trifolium macrocephalum,largehead clover,Perennial,Forb,Native
-UNKFORB,UNKFORB,Unknown forb,Unknown forb,Perennial,Forb,Native
-VEDU,VEDU,Ventenata dubia,North Africa grass,Annual,Graminoid,Invasive
-VUMI,VUMI,Vulpia microstachys,small fescue,Annual,Graminoid,Native
-ZIGADENUS,ZIGAD,Zigadenus sp.,deathcamas,Perennial,Forb,Native
+CT_CODE,USDA,latinName,commonName,duration,habit,status,functionalGroup
+AGHE,AGHE2,Agoseris heterophylla,annual agoseris,Annual,Forb,Native,Native.Annual.Forb
+BLSC,BLSC,Blepharipappus scaber,rough eyelashweed,Annual,Forb,Native,Native.Annual.Forb
+CATE,CATE26,Castilleja tenuis,hairy Indian paintbrush,Annual,Forb,Native,Native.Annual.Forb
+CLPU,CLPU,Clarkia pulchella,pinkfairies,Annual,Forb,Native,Native.Annual.Forb
+COGR,COGR4,Collomia grandiflora,grand collomia,Annual,Forb,Native,Native.Annual.Forb
+COLLOMIA,COLLO,Collomia sp.,trumpet,Annual,Forb,Native,Native.Annual.Forb
+COPA,COPA3,Collinsia parviflora,maiden blue eyed Mary,Annual,Forb,Native,Native.Annual.Forb
+CROC,CROC,Crepis occidentalis,largeflower hawksbeard,Annual,Forb,Native,Native.Annual.Forb
+CRYPTANTHA,CRYPT,Cryptantha sp.,cryptantha,Annual,Forb,Native,Native.Annual.Forb
+EPBR,EPBR3,Epilobium brachycarpum,tall annual willowherb,Annual,Forb,Native,Native.Annual.Forb
+GAAP,GAAP2,Galium aparine,stickywilly,Annual,Forb,Native,Native.Annual.Forb
+GAYOPHYTUM,GAYOP,Gayophytum sp,groundsmoke,Annual,Forb,Native,Native.Annual.Forb
+LELI,LEPTO22,Leptosiphon sp.,leptosiphon,Annual,Forb,Native,Native.Annual.Forb
+LIMI,HEMI9,Hesperolinon micranthum,smallflower dwarf-flax,Annual,Forb,Native,Native.Annual.Forb
+MAGR,MAGR3,Madia gracilis,grassy tarweed,Annual,Forb,Native,Native.Annual.Forb
+MAMI,HEMI20,Hemizonella minima,opposite-leaved tarweed,Annual,Forb,Native,Native.Annual.Forb
+MENTZELIA,MEDI,Mentzelia dispersa,bushy blazingstar,Annual,Forb,Native,Native.Annual.Forb
+MIGR,MIGR,Microsteris gracilis,slender phlox,Annual,Forb,Native,Native.Annual.Forb
+NAVARRETIA,NAVAR,Navarretia sp.,pincushion plant,Annual,Forb,Native,Native.Annual.Forb
+NEPA,NEPA,Nemophila parviflora,smallflower nemophila,Annual,Forb,Native,Native.Annual.Forb
+ORUN,ORUN,Orobanche uniflora,oneflowered broomrape,Annual,Forb,Native,Native.Annual.Forb
+PODO,PODO4,Polygonum douglasii,Douglas' knotweed,Annual,Forb,Native,Native.Annual.Forb
+POPO,POPO4,Polygonum polygaloides,milkwort knotweed,Annual,Forb,Native,Native.Annual.Forb
+TRCY,TRCY,Trifolium cyathiferum,cup clover,Annual,Forb,Native,Native.Annual.Forb
+DEDA,DEDA,Deschampsia danthonioides,annual hairgrass,Annual,Graminoid,Native,Native.Annual.Grass
+VUMI,VUMI,Vulpia microstachys,small fescue,Annual,Graminoid,Native,Native.Annual.Grass
+ALAL,ALAL3,Alyssum alyssoides,pale madwort,Annual,Forb,Invasive,Invasive.Annual.Forb
+DRVE,DRVE2,Draba verna,spring draba,Annual,Forb,Invasive,Invasive.Annual.Forb
+HOUM,HOUM,Holosteum umbellatum,jagged chickweed,Annual,Forb,Invasive,Invasive.Annual.Forb
+MYST,MYST2,Myosotis stricta,strict forget-me-not,Annual,Forb,Invasive,Invasive.Annual.Forb
+TRDU,TRDU,Tragopogon dubius,yellow salsify,Annual,Forb,Invasive,Invasive.Annual.Forb
+AGIN,APIN,Apera interrupta,dense silkybent,Annual,Graminoid,Invasive,Invasive.Annual.Grass
+BRJA,BRAR5,Bromus japonicus,field brome,Annual,Graminoid,Invasive,Invasive.Annual.Grass
+BRTE,BRTE,Bromus tectorum,cheatgrass,Annual,Graminoid,Invasive,Invasive.Annual.Grass
+VEDU,VEDU,Ventenata dubia,North Africa grass,Annual,Graminoid,Invasive,Invasive.Annual.Grass
+POBU,POBU,Poa bulbosa,bulbous bluegrass,Perennial,Graminoid,Invasive,Invasive.Perennial.Grass
+THIN,THIN6,Agropyron intermedium,intermediate wheatgrass,Perennial,Graminoid,Invasive,Invasive.Perennial.Grass
+RUAC,RUAC3,Rumex acetosella,common sheep sorrel,Perennial,Forb,Invasive,Perennial.Forb
+ACMI,ACMI2,Achillea millefolium,common yarrow,Perennial,Forb,Native,Perennial.Forb
+AGGR,AGGR,Agoseris grandiflora,bigflower agoseris,Perennial,Forb,Native,Perennial.Forb
+ALAC,ALAC4,Allium acuminatum,tapertip onion,Perennial,Forb,Native,Perennial.Forb
+ANFL,ANFL2,Antennaria flagellaris,whip pussytoes,Perennial,Forb,Native,Perennial.Forb
+ANLU,ANLU2,Antennaria luzuloides,rush pussytoes,Perennial,Forb,Native,Perennial.Forb
+ARABIS,ARABI2,Arabis spp.,rockgress,Perennial,Forb,Native,Perennial.Forb
+ARAC,ARAC2,Arenaria aculeata,prickly sandwort,Perennial,Forb,Native,Perennial.Forb
+ARCO,ARCO9,Arnica cordifolia,heartleaf arnica,Perennial,Forb,Native,Perennial.Forb
+ARSO,ARSO2,Arnica sororia,twin arnica,Perennial,Forb,Native,Perennial.Forb
+ASTERACEAE,Asteraceae,Asteraceae,Unknown sunflower,Perennial,Forb,Native,Perennial.Forb
+BASA,BASA3,Balsamorhiza sagittata,arrowleaf balsamroot,Perennial,Forb,Native,Perennial.Forb
+CAEU,CAEU,Calochortus eurycarpus,white mariposa lily,Perennial,Forb,Native,Perennial.Forb
+CLPE,CLPE,Claytonia perfoliata,miner's lettuce,Perennial,Forb,Native,Perennial.Forb
+CREPIS,CREPI,Crepis sp.,hawksbeard,Perennial,Forb,Native,Perennial.Forb
+CYFR,CYFR2,Cystopteris fragilis,brittle bladderfern,Perennial,Forb,Native,Perennial.Forb
+DELPHINIUM,DELPH,Delphinium sp.,larkspur,Perennial,Forb,Native,Perennial.Forb
+DODECATHEON,DODEC,Dodecatheon sp.,shootingstar,Perennial,Forb,Native,Perennial.Forb
+ERHE,ERHE2,Eriogonum heracleoides,parsnipflower buckwheat,Perennial,Forb,Native,Perennial.Forb
+ERIGERON,ERIGE2,Erigeron sp.,fleabane,Perennial,Forb,Native,Perennial.Forb
+FRAGARIA,FRAGA,Fragaria sp.,strawberry,Perennial,Forb,Native,Perennial.Forb
+GETR,GETR,Geum triflorum,old man's whiskers,Perennial,Forb,Native,Perennial.Forb
+HIERACIUM,HIERA,Hieracium sp.,hawkweed,Perennial,Forb,Native,Perennial.Forb
+LILIACEAE,Lilicaeae,Liliaceae,Unknown Lily,Perennial,Forb,Native,Perennial.Forb
+LIRU,LIRU4,Lithospermum ruderale,western stoneseed,Perennial,Forb,Native,Perennial.Forb
+LITHOPHRAGMA,LITHO2,Lithophragma sp.,woodland-star,Perennial,Forb,Native,Perennial.Forb
+LOLE,LOBIL,Lomatium leptocarpum,Wasatch desertparsley,Perennial,Forb,Native,Perennial.Forb
+LOMATIUM,LOMAT,Lomatium sp.,desertparsley,Perennial,Forb,Native,Perennial.Forb
+LONU,LONU2,Lomatium nudicaule,barestem biscuitroot,Perennial,Forb,Native,Perennial.Forb
+LUPINUS,LUPIN,Lupinus sp.,lupine,Perennial,Forb,Native,Perennial.Forb
+NOTR,NOTR2,Nothocalais troximoides,sagebrush false dandelion,Perennial,Forb,Native,Perennial.Forb
+OLDO,OLDO,Olsynium douglasii ,Douglas' grasswidow,Perennial,Forb,Native,Perennial.Forb
+OSBE,OSBE,Osmorhiza berteroi,sweetcicely,Perennial,Forb,Native,Perennial.Forb
+PENSTEMON,PENST,Penstemon spp.,beardtongue,Perennial,Forb,Native,Perennial.Forb
+PHCH,PHCH,Phoenicaulis cheiranthoides,wallflower phoenicaulis,Perennial,Forb,Native,Perennial.Forb
+PHLOX,PHLOX,Phlox sp,phlox,Perennial,Forb,Native,Perennial.Forb
+SAXIFRAGACEAE,Saxifragaceae,Saxifragaceae,Unknown saxifrage,Perennial,Forb,Native,Perennial.Forb
+SCUTELLARIA,SCUTE,Scutellaria spp.,Scullcap,Perennial,Forb,Native,Perennial.Forb
+SEST,SEST2,Sedum stenopetalum,wormleaf stonecrop,Perennial,Forb,Native,Perennial.Forb
+SIOR,SIOR,Sidalcea oregana,Oregon checkerbloom,Perennial,Forb,Native,Perennial.Forb
+SOCA,SOCA6,Solidago canadensis,Canada goldenrod,Perennial,Forb,Native,Perennial.Forb
+THALICTRUM,THALI2,Thalictrum sp.,meadow-rue,Perennial,Forb,Native,Perennial.Forb
+TRMA,TRMA3,Trifolium macrocephalum,largehead clover,Perennial,Forb,Native,Perennial.Forb
+UNKFORB,UNKFORB,Unknown forb,Unknown forb,Perennial,Forb,Native,Perennial.Forb
+ZIGADENUS,ZIGAD,Zigadenus sp.,deathcamas,Perennial,Forb,Native,Perennial.Forb
+POPR,POPR,Poa pratensis,Kentucky bluegrass,Perennial,Graminoid,Native,Perennial.Graminoid
+ACHNATH,ACHNA,Achnatherum spp.,needlegrass,Perennial,Graminoid,Native,Perennial.Graminoid
+ACOC,ACOC3,Achnatherum occidentale,western needlegrass,Perennial,Graminoid,Native,Perennial.Graminoid
+BRCA,BRCA5,Bromus carinatus,California brome,Perennial,Graminoid,Native,Perennial.Graminoid
+CAGE,CAGE2,Carex geyeri,Geyer's sedge,Perennial,Graminoid,Native,Perennial.Graminoid
+CARU,CARU,Calamagrostis rubescens,pinegrass,Perennial,Graminoid,Native,Perennial.Graminoid
+DAUN,DAUN,Danthonia unispicata,onespike danthonia,Perennial,Graminoid,Native,Perennial.Graminoid
+DECA,DECE,Deschampsia cespitosa,tufted hairgrass,Perennial,Graminoid,Native,Perennial.Graminoid
+ELEL,ELEL5,Elymus elymoides,squirreltail,Perennial,Graminoid,Native,Perennial.Graminoid
+FEID,FEID,Festuca idahoensis,Idaho fescue,Perennial,Graminoid,Native,Perennial.Graminoid
+JUNCUS,JUNCU,Juncus sp.,rush,Perennial,Graminoid,Native,Perennial.Graminoid
+POACEAE,Poaceae,Poaceae,Unknown Grass,Perennial,Graminoid,Native,Perennial.Graminoid
+POSE,POSE,Poa secunda,Sandberg bluegrass,Perennial,Graminoid,Native,Perennial.Graminoid
+PSSP,PSSP6,Pseudoroegneria spicata,bluebunch wheatgrass,Perennial,Graminoid,Native,Perennial.Graminoid
+ARRI,ARRI2,Artemesia rigida,scabland sagebrush,Perennial,Shrub,Native,Shrub
+CELE,CELE3,Cercocarpus ledifolius,curl-leaf mountain mahogany,Perennial,Shrub,Native,Shrub
+ERNA,ERNA10,Ericameria nauseosa,rubber rabbitbrush,Perennial,Shrub,Native,Shrub
+PUTR,PUTR2,Purshia tridentata,antelope bitterbrush,Perennial,Shrub,Native,Shrub
+RIBES,RIBES,Ribes sp.,currant,Perennial,Shrub,Native,Shrub
+ROSA,ROSA5,Rosa spp.,rose,Perennial,Shrub,Native,Shrub
+SYAL,SYAL,Symphoricarpos albus,common snowberry,Perennial,Shrub,Native,Shrub
+SYMPHORYCARPUS,SYMPH,Symphoricarpos ,snowberry,Perennial,Shrub,Native,Shrub
+ERIOGONUM,ERIOG,Eriogonum sp.,buckwheat,Perennial,Subshrub,Native,Subshrub
+GUSA,GUSA2,Gutierrezia sarothrae,broom snakeweed,Perennial,Subshrub,Native,Subshrub
+MARE,MARE11,Mahonia repens,creeping barberry,Perennial,Subshrub,Native,Subshrub
+POGL,POGL9,Drymocallis glandulosa,sticky cinquefoil,Perennial,Subshrub,Native,Subshrub
+JUOC,JUOC,Juniperus occidentalis,western juniper,Perennial,Tree,Native,Tree
+PIPO,PIPO,Pinus ponderosa,ponderosa pine,Perennial,Tree,Native,Tree
+PSME,PSME,Pseudotsuga menziesii,Douglas-fir,Perennial,Tree,Native,Tree
