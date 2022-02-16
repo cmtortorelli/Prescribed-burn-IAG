@@ -8,7 +8,7 @@ output: html_document
 ```{r setup, include=FALSE}
 knitr::opts_chunk$set(echo = TRUE)
 library(here)
-library(tidyr)
+library(tidyverse)
 library(ordinal)
 library(ggplot2)
 library(MASS)
@@ -45,7 +45,7 @@ orddf <- subset(sub, BURN17 != "c_unburned")
 orddf <- subset(orddf, YEAR == 16)
 
 #change burn level to a factor
-orddf$BURN17 <- factor(as.character(orddf$BURN17), levels = c("unburned","<50",">50"))
+orddf$BURN17 <- factor(orddf$BURN17, levels = c("unburned","<50",">50"))
 levels(orddf$BURN17) <- list(unburned="unburned", low_sev="<50", high_sev=">50")
 
 qplot(x = IAGperc, y = BURN17, data = orddf)
@@ -137,7 +137,7 @@ z
 p <- (1 - pnorm(abs(z), 0, 1)) * 2
 p
 
-
+emmeans(m1, pairwise ~ BURN17|IAGperc + CANOPY, adjust = NULL)
 
 #multinomial model is a better fit than ordinal regression and assumptions are met
 ```
@@ -181,7 +181,7 @@ library(effects)
 #extract fits and 95% cis
 fit.eff <- Effect("IAGperc", m1, xlevels = 200)
 fit.df <- data.frame(fit.eff$model.matrix, fit.eff$prob, fit.eff$lower.prob, 
-           fit.eff$upper.prob)
+           fit.eff$upper.prob) #canopy is fixed at 7.019% (canopy mean)
 
 #create predictor df for plotting
 fit.df2 <- gather(fit.df, "burncat", "prob", c(prob.unburned, prob.low_sev, prob.high_sev))
@@ -225,7 +225,7 @@ ggplot(newdf, aes(x = IAG_cover, y = prob)) +
   xlab("IAG cover (%)")+
   ylab("Probability")
 
-ggsave("multinomial_by_IAG.png")
+#ggsave("multinomial_by_IAG.svg")
 ```
 
 

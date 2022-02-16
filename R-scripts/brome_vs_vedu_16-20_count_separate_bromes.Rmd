@@ -10,16 +10,16 @@ knitr::opts_chunk$set(echo = TRUE)
 
 library(here)
 library(MASS)
-library(ggplot2)
 library(nlme)
 library(emmeans)
-library(tidyr)
+library(tidyverse)
+library(sjPlot)
+library(car)
 ```
 
 ```{r read in data}
 
 ubveg_iag <- read.csv(here("raw-data", "ubdata_16-20_species_tally.csv"))
-
 
 ```
 
@@ -27,8 +27,6 @@ ubveg_iag <- read.csv(here("raw-data", "ubdata_16-20_species_tally.csv"))
 
 #change year to factor
 ubveg_iag$YEAR <- as.factor(ubveg_iag$YEAR)
-
-
 ```
 
 
@@ -63,101 +61,112 @@ ubiag_merge <- merge(ubiag_postfire, ubiag_prefiresub, by = "PLOT")
 ```
 
 
+```{r}
+df20 <- filter(ubiag_merge, YEAR == '20')
+df19 <- filter(ubiag_merge, YEAR == '19')
+plot(df20$VEDU80 ~ df20$VEDU80_prefire, col = df20$BURN17)
+
+lmvd <- lm(VEDU80 ~ VEDU80_prefire, data = df20)
+lmbt <- lm(BRTE80 ~ BRTE80_prefire, data = df20)
+lmbj <- lm(BRJA80 ~ BRJA80_prefire, data = df20)
+
+summary(lmvd)
+summary(lmbt)
+summary(lmbj)
+
+plot(lmvd)
+plot(lmbt)
+plot(lmbj)
+```
 
 
-model IAGs separately using binomial generalized linear mixed models
+
+model IAGs separately using binomial generalized linear mixed models (logistic regression)
 ```{r}
 library(lme4)
 #https://aosmith.rbind.io/2020/08/20/simulate-binomial-glmm/
 
 (m.vd <- glmer(cbind(VEDU80, 80 - VEDU80) ~ BURN17*YEAR + VEDU80_prefire + (1 | PLOT), data = ubiag_merge, family = binomial))
 
-plot(m.vd)
-
-
 (m.bt <- glmer(cbind(BRTE80, 80 - BRTE80) ~ BURN17*YEAR + BRTE80_prefire +(1 | PLOT), data = ubiag_merge, family = binomial))
-m.bt2 <- update(m.bt, control = glmerControl(optimizer="bobyqa"))
+m.bt2 <- update(m.bt, control = glmerControl(optimizer="bobyqa")) ##trouble converging..fit with a different optimizer 
 
 (m.bj <- glmer(cbind(BRJA80, 80 - BRJA80) ~ BURN17*YEAR + BRJA80_prefire +(1 | PLOT), data = ubiag_merge, family = binomial))
 m.bj2 <- update(m.bj, control = glmerControl(optimizer="bobyqa"))
 
 
-summary(m.vd)
-emmeans(m.vd, "YEAR", type = "response")
-summary(m.bt2)
-summary(m.bj2)
+#check for overdispersion - f the ratio considerably larger than 1, then it indicates that we have an overdispersion issue.
+deviance(m.vd)/df.residual(m.vd) 
+deviance(m.bt2)/df.residual(m.bt2) 
+deviance(m.bj2)/df.residual(m.bj2) 
 
-library(sjPlot)
-(pvd <- plot_model(m.vd, type = "diag"))
-(pvd <- plot_model(m.bt, type = "slope"))
-#effect of interaction between year 20 and >50burn
+#looks good!
 ```
 
-
-
-
-
-Extract predictions for plotting
+explore model results
 ```{r}
-library(effects)
-library(forcats)
+#examine results
+summary(m.vd)
+emmeans(m.vd, revpairwise ~ BURN17 + VEDU80_prefire, adjust = NULL)
+emvd <- emmeans(m.vd, trt.vs.ctrl ~ BURN17 | YEAR + VEDU80_prefire, adjust = NULL)
+Anova(m.vd)
 
-#extract confidence intervals and predictors for brte
-ccbt <- confint(m.bt2,parm="beta_",method="Wald")
-#ccbt.2 <- confint(m.bt,parm="beta_") #longer without optimizer but more accurate
+summary(m.bt2)
+embt <- emmeans(m.bt2, trt.vs.ctrl ~ BURN17 | YEAR + BRTE80_prefire, adjust = NULL)
+Anova(m.bt2)
 
-bttab <- data.frame(cbind(est=fixef(m.bt2),ccbt))
-bttab$species <- "BRTE"
-bttab$predictor <- rownames(bttab)
-
-#extract confidence intervals and predictors for brja
-ccbj <- confint(m.bj2,parm="beta_",method="Wald")
-#ccbj.2 <- confint(m.bj2,parm="beta_") #longer but more accurate
-
-bjtab <- data.frame(cbind(est=fixef(m.bj2),ccbj))
-bjtab$species <- "BRJA"
-bjtab$predictor <- rownames(bjtab)
-
-#extract confidence intervals and predictors for vedu
-ccvd <- confint(m.vd,parm="beta_",method="Wald")
-#ccvd.2 <- confint(m.vd3,parm="beta_") #longer but more accurate
-vdtab2 <- data.frame(cbind(est=fixef(m.vd),ccvd))
-vdtab2$species <- "VEDU"
-vdtab2$predictor <- rownames(vdtab2)
-
-#combine all predictions into IAG table
-iagtab <- rbind(bttab, bjtab, vdtab2)
-
-iagtab$predictor <- factor(iagtab$predictor)
-iagtab$species <- factor(iagtab$species)
-levels(iagtab$predictor) <- list("(Intercept)" = "(Intercept)", "low severity" = "BURN17<50", "high severity" = "BURN17>50", "low severity:2019" = "BURN17<50:YEAR19", "low severity:2020" ="BURN17<50:YEAR20", "prefire cover" = "BRTE80_prefire", "prefire cover" = "VEDU80_prefire", "2020" = "YEAR20", "2019" = "YEAR19", "high severity:2020" = "BURN17>50:YEAR20", "high severity:2019" = "BURN17>50:YEAR19", "prefire cover" = "BRJA80_prefire")
-
-iagtab$predictor <- fct_rev(factor(iagtab$predictor, levels = c("(Intercept)", "low severity", "high severity", "2019", "2020", "prefire cover", "low severity:2019", "low severity:2020", "high severity:2019", "high severity:2020")))
-# cor(ubiag_merge$BRTE80, ubiag_merge$BRJA80) #bromes are highly correlated
-# cor(ubiag_merge$VEDU80, ubiag_merge$BROME80) # VEDU is not correalted with bromes
-
-colnames(iagtab) <- c("Estimate", "lower.confint", "upper.confint", "species", "Predictor")
+summary(m.bj2)
+embj <- emmeans(m.bj2, trt.vs.ctrl ~ BURN17 | YEAR + BRJA80_prefire, adjust = NULL)
+Anova(m.bj2)
 
 ```
 
-Plot estimates
-```{r fig.height=6.5, fig.width=4.25}
-ggplot(data = iagtab, aes(x = Estimate, y = Predictor, group = species, color = species))+
-    geom_vline(xintercept = 0, colour = "dark grey", lty = 2, size = .7)+
+### Plot contrasts
+```{r}
+#extract contrasts to table for each species
+emvd2 <- emvd$contrasts %>%
+     confint() %>% rbind()
+embt2 <- embt$contrasts %>%
+     confint() %>% rbind()
+embj2 <- embj$contrasts %>%
+     confint() %>% rbind()
+```
 
-  geom_point(size = 3.2, position = position_dodge(0.5)) +
-  geom_errorbar(aes(xmin = lower.confint, xmax = upper.confint), width = .2, alpha = 0.5,position = position_dodge(0.5), size = 1)+
-  theme_bw(base_size = 15) + # Make black and white,
+ggplot
+```{r}
+plotcontrast <- function(df){
+ p <-  ggplot(df, aes(x = YEAR, y = estimate, group = contrast, color = contrast) ) + 
+		geom_point(size = 3.2, position = position_dodge(0.2)) + # Add points
+  geom_errorbar(aes(ymin = asymp.LCL, ymax = asymp.UCL), width = .5, alpha = 0.5, size = 1, position = position_dodge(0.2)) +
+		labs(x = NULL, y = "difference in log-odds") + # Label axes
+		theme_bw(base_size = 15) + # Make black and white,
 								# increase base text size
-  theme(panel.grid.minor = element_blank(), legend.position = "bottom")+ # Remove y gridlines
-  
-			       scale_color_manual(values = c( "#8bb8a8", "#22333b", "#754043"))
+    theme(panel.grid.major = element_blank(), panel.grid.minor = element_blank())+
+	geom_hline(yintercept = 0, colour = "dark grey", lty = 2) +
+	scale_color_manual(values = c("grey", "black"))+
+  theme(legend.title = element_blank()) +
+  ylim(min = -5, max = 3)
 
-#log (p/1-p). 
-#ggsave("iag_separate_models.svg")
+ return(p)
+}
+
+
 ```
 
-Plot data
+plot contrasts
+```{r}
+vcontrast <- plotcontrast(emvd2) +  theme(legend.position = "bottom")
+#pre-fire VD hits 5.76 = 7.2% cover
+
+btcontrast <- plotcontrast(embt2) +  theme(legend.position = "NULL") + ylab("")
+#pre-fire bt hits - 4.05 = 5.06 % cover
+
+bjcontrast <- plotcontrast(embj2) +  theme(legend.position = "NULL") + ylab("")
+#prefire bj hits - 3.11 = 3.89 % cover
+
+```
+
+### Plot raw data
 ```{r}
 #plot raw data with standard errors
 #summarize data
@@ -182,6 +191,7 @@ bjsum <- summarySE(ubveg_iag, measurevar="BRJA_perc", groupvars=c("BURN2","YEAR2
 
 
 ```
+
 plotting function
 ```{r fig.height=4.25, fig.width=8.5}
 plotIAG <- function(df,y.var){
@@ -194,7 +204,7 @@ plotIAG <- function(df,y.var){
 								# increase base text size
     theme(panel.grid.major = element_blank(), panel.grid.minor = element_blank())+
 	
-	scale_color_manual(values = c("#606c38", "#dda15e", "#bc6c25"))+
+	scale_color_manual(values = c("#52796f", "#dda15e", "#bc6c25"))+
   theme(legend.title = element_blank()) +
   geom_vline(xintercept = 2017, colour = "dark grey", lty = 2)+
   ylim(min = 0, max = 35)
@@ -204,21 +214,25 @@ plotIAG <- function(df,y.var){
 ```
 
 combine plots
-```{r}
+```{r fig.height=4, fig.width=9}
 
 rawvd <- plotIAG(vdsum, vdsum$VEDU_perc) + ggtitle(expression(italic("V. dubia"))) +  theme(legend.position = "bottom")
 
 rawbt <- plotIAG(btsum, btsum$BRTE_perc) + ggtitle(expression(italic("B. tectorum"))) + theme(legend.position = "NULL") + ylab("")
 
-rawbj <- plotIAG(btsum, btsum$BRTE_perc) + ggtitle(expression(italic("B. arvensis"))) + theme(legend.position = "NULL") + ylab("")
+rawbj <- plotIAG(bjsum, bjsum$BRJA_perc) + ggtitle(expression(italic("B. arvensis"))) + theme(legend.position = "NULL") + ylab("")
+```
 
+```{r}
 legend <- get_legend(rawvd)
 
 rawvd <- rawvd + theme(legend.position="none") 
 
-rawplots <- ggarrange(rawvd, rawbt, rawbj, ncol = 3, common.legend = TRUE, legend="bottom")
+rawplots <- ggarrange(rawvd, rawbt, rawbj, vcontrast, btcontrast, bjcontrast, ncol = 3, nrow = 2, common.legend = TRUE, legend="bottom")
 
 rawplots
 
-#ggsave("annual_Grass_cover_through_time_raw.svg")
+# ggsave("annual_Grass_cover_through_time_raw.svg")
+# ggsave("annual_Grass_cover_through_time_raw.png")
 ```
+

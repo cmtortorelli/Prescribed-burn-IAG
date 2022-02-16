@@ -50,43 +50,6 @@ funcdf <- merge(func_sum, ub_veg[,1:5])
 
 ```
 
-Compare diversity!
-```{r}
-div <- ub_veg
-
-div$richness <- rowSums(div[,6:114] != 0)
-div$shan <- diversity(div[,6:114], index = "shannon")
-
-
-div$YEAR <- factor(div$YEAR)
-#merge unburned and control unburned plots
-div$BURN2 <- div$BURN17
-div$BURN2[which(div$BURN2 == "c_unburned")] <- "unburned"
-
-div$BURN17 <- factor(div$BURN17, levels = c("unburned", "<50", ">50"))
-
-
-m1 <- lmer(shan ~ YEAR*BURN17 + (1|PLOT), data = div)
-plot(m1)
-
-summary(m1)
-confint(m1)
-
-m2 <- lmer(richness ~ YEAR*BURN17 + (1|PLOT), data = div)
-plot(m2)
-
-summary(m2)
-confint(m2)
-(emmeans(m2, specs = revpairwise ~ BURN17 | YEAR, adjust = NULL))
-
-
-library(car)
-Anova(m1, type = 2)
-Anova(m2, type = 2)
-```
-
-
-
 remove overstory species
 ```{r}
 # tree <- c("PIPO", "PSME", "JUOC")
@@ -136,28 +99,14 @@ ub_vegnorare$YEAR <- as.factor(ub_vegnorare$YEAR)
 ub_vegnorare$PLOT <- as.factor(ub_vegnorare$PLOT)
 ```
 
-```{r}
-envdf1 <- funcdf[,2:10]
-
-#fit to ordination
-env.fit <- envfit(nms, envdf1, perm=500)
-```
-
-
 plot
 ```{r}
-plot(nms, type = "n")
+plot(nms)
 
-#ordiarrows (nms, groups = ub_vegnorare$PLOT, order.by = ub_vegnorare$YEAR, label = FALSE, length = .1, display = "sites")
+ordiarrows (nms, groups = ub_vegnorare$PLOT, order.by = ub_vegnorare$YEAR, label = FALSE, length = .1, display = "sites")
 
-# ordiellipse(nms, ub_vegnorare$BURN17, col = 1:4, kind="sd", label = TRUE)
-ordiellipse(nms, ub_vegnorare$YEAR, col = 1:4, kind="sd", label = TRUE, show.groups = c(16, 18, 19, 20))
-
-
-# with(ub_vegnorare, points(nms, display = "sites", col = c("#606c38", "#dda15e", "#bc6c25")[YEAR], cex=1.25))
-with(ub_vegnorare, points(nms, display = "species"))
-
-plot(env.fit)
+ordiellipse(nms, ub_vegnorare$YEAR, col = 1:4, kind="ehull", label = TRUE, show.groups = c(16, 18, 19, 20))
+#ordiellipse(nms, ub_vegnorare$BURN17, col = 1:4, kind="ehull", label = TRUE)
 ```
 
 ### NMS with only YR 2016 (pre-fire) & 2020 (3 yrs post fire)
@@ -180,7 +129,9 @@ ub_vegnorare2$BURN2 <- ub_vegnorare2$BURN17
 ub_vegnorare2$BURN2[which(ub_vegnorare2$BURN2 == "c_unburned")] <- "unburned"
 
 ub_vegnorare2$BURN2_YR <- paste(ub_vegnorare2$BURN2, ub_vegnorare2$YEAR, sep = "_")
-ub_vegnorare2$BURN17_YR <- paste(ub_vegnorare2$BURN17, ub_vegnorare2$YEAR, sep = "_")
+
+
+
 ```
 
 ```{r}
@@ -188,11 +139,10 @@ ub_vegnorare2$BURN17_YR <- paste(ub_vegnorare2$BURN17, ub_vegnorare2$YEAR, sep =
 speciesScores <- nms2$species
 siteScores <- nms2$points
 
-siteScores_burn <- cbind(data.frame(siteScores), ub_vegnorare2[,"BURN17"])
+siteScores_burn <- cbind(data.frame(siteScores), ub_vegnorare2[,"BURN2"])
 
 species <- rownames(speciesScores)
 ```
-
 
 
 ```{r fig.height=8, fig.width=8}
@@ -206,10 +156,9 @@ ordiellipse(nms2, ub_vegnorare2$BURN2_YR,
             col = c("#dda15e", "red",  "#606c38"),
             kind = "sd",
             alpha = 30,
-            #show.groups = c("unburned_20", "<50_20", ">50_20")
+            show.groups = c("unburned_20", "<50_20", ">50_20"),
             border = "white")
 
-plot(env.fit2)
 # ordihull(nms2, ub_vegnorare2$BURN2_YR,
 #             scaling = 3, label = FALSE, draw = "polygon",
 #             col = c("#dda15e", "red",  "#606c38"),
@@ -246,7 +195,7 @@ ordiarrows (nms2, groups = ub_vegnorare2$PLOT, order.by = ub_vegnorare2$YEAR,
 
 #set text
 #wordcloud::textplot(speciesScores[, 1], speciesScores[, 2], species)
-# text(speciesScores[, 1], speciesScores[, 2], pos = 3, offset = 0.5, col = "black", font = 2, rownames(speciesScores), cex=0.7)
+text(speciesScores[, 1], speciesScores[, 2], pos = 3, offset = 0.5, col = "black", font = 2, rownames(speciesScores), cex=0.7)
 
 #text(siteScores_burn[, 1], siteScores_burn[, 2], pos = 3, offset = 0.5, col = "black", font = 2, rownames(siteScores_burn), cex=0.7)
 
@@ -258,41 +207,37 @@ funcdf$BURN2 <- funcdf$BURN17
 funcdf$BURN2[which(funcdf$BURN2 == "c_unburned")] <- "unburned"
 
 funcdf$BURN2_YR <- paste(funcdf$BURN2, funcdf$YEAR, sep = "_")
-funcdf$BURN17_YR <- paste(funcdf$BURN17, funcdf$YEAR, sep = "_")
+funcdf$BURN_YR <- paste(funcdf$BURN17, funcdf$YEAR, sep = "_")
+
 
 #remove canopy "tree"
-funcdf2 <- funcdf[,-11]
+funcdf <- funcdf[,-11]
+
 
 #subset dataframe for pre and post fire data
-sp4nmsfunc <- funcdf2[which(funcdf2$YEAR == 16 | funcdf2$YEAR == 20), 1:10]
+sp4nmsfunc <- funcdf[which(funcdf$YEAR == 16 | funcdf$YEAR == 20), 1:10]
 
 
 
 #set plot to row names 
 rownames(sp4nmsfunc) <- sp4nmsfunc$PLOT_YR 
 sp4nmsfunc$PLOT_YR  <- NULL 
+
 ```
 
+run NMS
 ```{r}
 nmsfunc <- metaMDS(sqrt(sp4nmsfunc), distance='bray', k=2, trymax=500, autotransform=FALSE, wasscores=TRUE, noshare=FALSE) 
 
 ```
 
 ```{r}
-funcdf_sub <- funcdf2[which(funcdf$YEAR == 16 | funcdf2$YEAR == 20),]
+funcdf_sub <- funcdf[which(funcdf$YEAR == 16 | funcdf$YEAR == 20),]
 
 funcdf_sub$YEAR <- factor(funcdf_sub$YEAR)
-funcdf_sub$BURN17 <- factor(funcdf_sub$BURN17, levels = c("c_unburned", "unburned", "<50", ">50"))
 funcdf_sub$BURN2 <- factor(funcdf_sub$BURN2, levels = c("unburned", "<50", ">50"))
+funcdf_sub$BURN17 <- factor(funcdf_sub$BURN17, levels = c("c_unburned", "unburned", "<50", ">50"))
 
-#add factor levles
-funcdf_sub$BURN17_YR <- factor(funcdf_sub$BURN17_YR, levels = c("c_unburned_16","unburned_16", "<50_16", ">50_16", "c_unburned_20","unburned_20", "<50_20", ">50_20"))
-
-funcdf_sub$BURN2_YR <- factor(funcdf_sub$BURN2_YR, levels = c("unburned_16", "<50_16", ">50_16", "unburned_20", "<50_20", ">50_20"))
-```
-
-
-```{r}
 #rotate to weigh invasive annual grasses on x axis
 nmsfunc_rot <- with(funcdf_sub, MDSrotate(nmsfunc, Invasive.Annual.Grass))
 ```
@@ -304,42 +249,61 @@ nmsfunc_rot <- with(funcdf_sub, MDSrotate(nmsfunc, Invasive.Annual.Grass))
 speciesScoresFunc <- nmsfunc_rot$species
 siteScoresFunc <- nmsfunc_rot$points
 
-siteScores_burnFunc <- cbind(data.frame(siteScoresFunc), funcdf_sub[, c("BURN2", "YEAR")])
+siteScores_burnFunc <- cbind(data.frame(siteScoresFunc), funcdf_sub[, c("BURN2", "YEAR", "BURN17")])
 
 speciesFunc <- rownames(speciesScoresFunc)
 ```
 
+add environmental variable for pre-treatment canopy 2016
 ```{r}
-envdf <- funcdf_sub[,2:10]
-
-#fit to ordination
-env.fit <- envfit(nmsfunc_rot, envdf, perm=500)
+# envdf <- func_sum[,c(1,11)]
+# envdf$YEAR <- substr(envdf$PLOT_YR, 1,2)
+# envdf$PLOT <- substr(envdf$PLOT_YR, 3, 8)
+# 
+# #subset for pre and post treatment
+# envdf <- filter(envdf, grepl('16UB', PLOT_YR) | grepl('20UB', PLOT_YR) )
+# 
+# #create var for just 2016 tree cover 
+# envdf16 <- filter(envdf, YEAR == 16)
+# envdf16$Tree16 <- envdf16$Tree
+# 
+# envdf2 <- merge(envdf, envdf16[,4:5])
+# 
+# #fit to ordination
+# env.fit <- envfit(nmsfunc_rot, envdf2, perm=999, scaling = "species")
+## somehting wrong with these plots!
 ```
 
 
 
+
 plot nms functional groups
-```{r fig.height=6, fig.width=11}
+```{r fig.height=6, fig.width=12}
 #svg("functionalGroupNMS.svg", width = 11, height = 6)
 
 par(mfrow=c(1,2))
 
 plot(nmsfunc_rot, type = "n")
 
-with(funcdf_sub, points(nmsfunc_rot, display = "sites", col = c("#52796f", "#dda15e", "#bc6c25")[BURN2], cex=1.25, pch = c(16, 17)[YEAR]))
+with(funcdf_sub, points(nmsfunc_rot, display = "sites", col = c("blue", "#52796f", "#dda15e", "#bc6c25")[BURN17], cex=1.25, pch = c(16, 17)[YEAR]))
 
 
-
-ordiellipse(nmsfunc_rot, funcdf_sub$BURN2_YR,
+ordiellipse(nmsfunc_rot, funcdf_sub$BURN_YR,
             scaling = 3, label = FALSE, draw = "polygon",
-            col = c("#52796f", "#dda15e", "#bc6c25"),
+            col = c("#dda15e", "red",  "#52796f", "blue"),
             kind = "sd",
             alpha = 40,
-            show.groups = c("unburned_16", "<50_16", ">50_16"),
+            show.groups = c("c_unburned_16","unburned_16", "<50_16", ">50_16"),
             border = "white")
 
-#add the linear vectors for functional groups
-plot(env.fit, col = "black", font = 2, cex=0.8)
+#add arrows for functional groups
+arrows(0, 0, speciesScoresFunc[, 1], speciesScoresFunc[, 2], length=0.1, angle=20, col ="black")
+
+#add environmental arrow for tree cover pre-treatment
+# plot(env.fit) # something wrong with these plots!
+
+#set text
+text(speciesScoresFunc[, 1], speciesScoresFunc[, 2], pos = 3, offset = 0.5, col = "black", font = 2, rownames(speciesScoresFunc), cex=0.8)
 
 #--------------------------------------------------------------------
 
@@ -348,25 +312,20 @@ plot(env.fit, col = "black", font = 2, cex=0.8)
 plot(nmsfunc_rot, type = "n")
 
 
-with(funcdf_sub, points(nmsfunc_rot, display = "sites", col = c("#52796f", "#dda15e", "#bc6c25")[BURN2], cex=1.25, pch = c(16, 17)[YEAR]))
+with(funcdf_sub, points(nmsfunc_rot, display = "sites", col = c("blue","#52796f", "#dda15e", "#bc6c25")[BURN17], cex=1.25, pch = c(16, 17)[YEAR]))
 
 
-
-ordiellipse(nmsfunc_rot, funcdf_sub$BURN2_YR,
+ordiellipse(nmsfunc_rot, funcdf_sub$BURN_YR,
             scaling = 3, label = FALSE, draw = "polygon",
-            col = c("#52796f", "#dda15e", "#bc6c25"),
+            col = c("#dda15e", "red",  "#52796f", "blue"),
             kind = "sd",
             alpha = 40,
-            show.groups = c("unburned_20", "<50_20", ">50_20"),
+            show.groups = c("c_unburned_20","unburned_20", "<50_20", ">50_20"),
             border = "white")
-
-#add the linear vectors for functional groups
-plot(env.fit, col = "black", font = 2, cex=0.8)
-
-# arrows(0, 0, speciesScoresFunc[, 1], speciesScoresFunc[, 2], length=0.1, angle=20, col ="black")
+arrows(0, 0, speciesScoresFunc[, 1], speciesScoresFunc[, 2], length=0.1, angle=20, col ="black")
 
 #set text
-# text(speciesScoresFunc[, 1], speciesScoresFunc[, 2], pos = 3, offset = 0.5, col = "black", font = 2, rownames(speciesScoresFunc), cex=0.8)
+text(speciesScoresFunc[, 1], speciesScoresFunc[, 2], pos = 3, offset = 0.5, col = "black", font = 2, rownames(speciesScoresFunc), cex=0.8)
 
 #arrows(0, 0, variableScores[, 1], variableScores[, 2], length=0.1, angle=20, col ="grey")
 
@@ -382,51 +341,6 @@ plot(env.fit, col = "black", font = 2, cex=0.8)
 #dev.off()
 ```
 
-```{r fig.height=6, fig.width=11}
-#svg("functionalGroupNMS.svg", width = 11, height = 6)
-
-par(mfrow=c(1,2))
-
-plot(nmsfunc_rot, type = "n")
-
-with(funcdf_sub, points(nmsfunc_rot, display = "sites", col = c("#1C1C5D", "#52796f", "#dda15e", "#bc6c25")[BURN17], cex=1.25, pch = c(16, 17)[YEAR]))
-
-
-
-ordiellipse(nmsfunc_rot, funcdf_sub$BURN17_YR,
-            scaling = 3, label = FALSE, draw = "polygon",
-            col = c("#1C1C5D", "#52796f", "#dda15e", "#bc6c25"),
-            kind = "sd",
-            alpha = 40,
-            show.groups = c("c_unburned_16","unburned_16", "<50_16", ">50_16"),
-            border = "white")
-
-#add the linear vectors for functional groups
-plot(env.fit, col = "black", font = 2, cex=0.8)
-
-#--------------------------------------------------------------------
-
-# plot post-fire (same NMS with 2020 ellipses)
-
-plot(nmsfunc_rot, type = "n")
-
-
-with(funcdf_sub, points(nmsfunc_rot, display = "sites", col = c("#1C1C5D", "#52796f", "#dda15e", "#bc6c25")[BURN17], cex=1.25, pch = c(16, 17)[YEAR]))
-
-
-
-ordiellipse(nmsfunc_rot, funcdf_sub$BURN17_YR,
-            scaling = 3, label = FALSE, draw = "polygon",
-            col = c("#1C1C5D", "#52796f", "#dda15e", "#bc6c25"),
-            kind = "sd",
-            alpha = 40,
-            show.groups = c("c_unburned_20","unburned_20", "<50_20", ">50_20"),
-            border = c("#1C1C5D", "#52796f", "#dda15e", "#bc6c25"))
-
-#add the linear vectors for functional groups
-plot(env.fit, col = "black", font = 2, cex=0.8)
-```
-
 
 
 Compare groups with MRPP
@@ -434,43 +348,36 @@ Compare groups with MRPP
 sp4nmsfunc16 <- sp4nmsfunc[1:37,]
 sp4nmsfunc20 <- sp4nmsfunc[38:74,]
 
-func.mrpp16 <- with(funcdf_sub[which(funcdf_sub$YEAR == 16),], mrpp(sp4nmsfunc16, BURN2, distance = "bray"))
+func.mrpp16 <- with(funcdf_sub[which(funcdf_sub$YEAR == 16),], mrpp(sp4nmsfunc16, BURN2, distance = "euclidean"))
 func.mrpp16
 
-func.mrpp20 <- with(funcdf_sub[which(funcdf_sub$YEAR == 20),], mrpp(sp4nmsfunc20, BURN2, distance = "bray"))
+func.mrpp20 <- with(funcdf_sub[which(funcdf_sub$YEAR == 20),], mrpp(sp4nmsfunc20, BURN2, distance = "euclidean"))
 func.mrpp20
 
 
 #compare pre and post treatment functional composition
 funcdf_unburned <- funcdf_sub %>% filter(BURN2 == "unburned") %>% column_to_rownames(var = "PLOT_YR")
-
 funcdf_lowsev <- funcdf_sub %>% filter(BURN2 == "<50") %>% column_to_rownames(var = "PLOT_YR")
-
 funcdf_highsev <- funcdf_sub %>% filter(BURN2 == ">50") %>% column_to_rownames(var = "PLOT_YR")
 
+funcmp.unburn <- with(funcdf_unburned, mrpp(funcdf_unburned[,2:10], YEAR, distance = "euclidean"))
+funcmp.lowsev <- with(funcdf_lowsev, mrpp(funcdf_lowsev[,2:10], YEAR, distance = "euclidean"))
+funcmp.highsev <- with(funcdf_highsev, mrpp(funcdf_highsev[,2:10], YEAR, distance = "euclidean"))
 
-(funcmp.unburn <- with(funcdf_unburned, mrpp(funcdf_unburned[,2:9], YEAR, distance = "bray")))
-(funcmp.lowsev <- with(funcdf_lowsev, mrpp(funcdf_lowsev[,2:9], YEAR, distance = "bray")))
-(funcmp.highsev <- with(funcdf_highsev, mrpp(funcdf_highsev[,2:9], YEAR, distance = "bray")))
-
-
+funcmp.unburn
+funcmp.lowsev
+funcmp.highsev
 
 #explore means
-func.md16 <- with(funcdf_sub[which(funcdf_sub$YEAR == 16),], meandist(vegdist(sp4nmsfunc16), BURN2, distance = "bray"))
+func.md16 <- with(funcdf_sub[which(funcdf_sub$YEAR == 16),], meandist(vegdist(sp4nmsfunc16), BURN2, distance = "euclidean"))
 summary(func.md16)
 
 plot(func.md16, kind = "histogram")
 
-func.md20 <- with(funcdf_sub[which(funcdf_sub$YEAR == 20),], meandist(vegdist(sp4nmsfunc20), BURN2, distance = "bray"))
+func.md20 <- with(funcdf_sub[which(funcdf_sub$YEAR == 20),], meandist(vegdist(sp4nmsfunc20), BURN2, distance = "euclidean"))
 summary(func.md20)
 
 plot(func.md20, kind = "histogram")
-```
-
-Compare unburned_control and unburned plots pre-fire
-```{r}
-(funcmp.unburn <- with(funcdf_unburned[1:21,], mrpp(funcdf_unburned[1:21,2:9], BURN17, distance = "bray")))
-
 ```
 
 
