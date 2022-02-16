@@ -20,7 +20,7 @@ library(car)
 ```{r read in data}
 
 ubveg_iag <- read.csv(here("raw-data", "ubdata_16-20_species_tally.csv"))
-
+ubveg <- read.csv(here("raw-data/ubdata_16-20_species_average.csv"))
 ```
 
 ```{r}
@@ -60,7 +60,7 @@ ubiag_merge <- merge(ubiag_postfire, ubiag_prefiresub, by = "PLOT")
 
 ```
 
-
+Explore data - how does pre-fire cover influence post-fire invasion?
 ```{r}
 df20 <- filter(ubiag_merge, YEAR == '20')
 df19 <- filter(ubiag_merge, YEAR == '19')
@@ -69,31 +69,33 @@ plot(df20$VEDU80 ~ df20$VEDU80_prefire, col = df20$BURN17)
 lmvd <- lm(VEDU80 ~ VEDU80_prefire, data = df20)
 lmbt <- lm(BRTE80 ~ BRTE80_prefire, data = df20)
 lmbj <- lm(BRJA80 ~ BRJA80_prefire, data = df20)
-
-summary(lmvd)
-summary(lmbt)
-summary(lmbj)
-
-plot(lmvd)
-plot(lmbt)
-plot(lmbj)
+# 
+# summary(lmvd)
+# summary(lmbt)
+# summary(lmbj)
+# 
+# plot(lmvd)
+# plot(lmbt)
+# plot(lmbj)
 ```
 
 
+## Model IAG response to burning*year
 
 model IAGs separately using binomial generalized linear mixed models (logistic regression)
 ```{r}
 library(lme4)
 #https://aosmith.rbind.io/2020/08/20/simulate-binomial-glmm/
 
-(m.vd <- glmer(cbind(VEDU80, 80 - VEDU80) ~ BURN17*YEAR + VEDU80_prefire + (1 | PLOT), data = ubiag_merge, family = binomial))
+m.vd <- glmer(cbind(VEDU80, 80 - VEDU80) ~ BURN17*YEAR + VEDU80_prefire + (1 | PLOT), data = ubiag_merge, family = binomial)
 
-(m.bt <- glmer(cbind(BRTE80, 80 - BRTE80) ~ BURN17*YEAR + BRTE80_prefire +(1 | PLOT), data = ubiag_merge, family = binomial))
+m.bt <- glmer(cbind(BRTE80, 80 - BRTE80) ~ BURN17*YEAR + BRTE80_prefire +(1 | PLOT), data = ubiag_merge, family = binomial)
 m.bt2 <- update(m.bt, control = glmerControl(optimizer="bobyqa")) ##trouble converging..fit with a different optimizer 
 
-(m.bj <- glmer(cbind(BRJA80, 80 - BRJA80) ~ BURN17*YEAR + BRJA80_prefire +(1 | PLOT), data = ubiag_merge, family = binomial))
+m.bj <- glmer(cbind(BRJA80, 80 - BRJA80) ~ BURN17*YEAR + BRJA80_prefire +(1 | PLOT), data = ubiag_merge, family = binomial)
 m.bj2 <- update(m.bj, control = glmerControl(optimizer="bobyqa"))
 
+# summary(m.bj)
 
 #check for overdispersion - f the ratio considerably larger than 1, then it indicates that we have an overdispersion issue.
 deviance(m.vd)/df.residual(m.vd) 
@@ -106,16 +108,16 @@ deviance(m.bj2)/df.residual(m.bj2)
 explore model results
 ```{r}
 #examine results
-summary(m.vd)
+# summary(m.vd)
 emmeans(m.vd, revpairwise ~ BURN17 + VEDU80_prefire, adjust = NULL)
 emvd <- emmeans(m.vd, trt.vs.ctrl ~ BURN17 | YEAR + VEDU80_prefire, adjust = NULL)
 Anova(m.vd)
 
-summary(m.bt2)
+# summary(m.bt2)
 embt <- emmeans(m.bt2, trt.vs.ctrl ~ BURN17 | YEAR + BRTE80_prefire, adjust = NULL)
 Anova(m.bt2)
 
-summary(m.bj2)
+# summary(m.bj2)
 embj <- emmeans(m.bj2, trt.vs.ctrl ~ BURN17 | YEAR + BRJA80_prefire, adjust = NULL)
 Anova(m.bj2)
 
@@ -142,7 +144,7 @@ levels(embj2$YEAR) <- list("2018" = "18", "2019" = "19", "2020" = "20")
 
 ```
 
-ggplot
+contrasts plotting function
 ```{r}
 plotcontrast <- function(df){
  p <-  ggplot(df, aes(x = YEAR, y = estimate, group = contrast, color = contrast) ) + 
@@ -202,7 +204,7 @@ bjsum <- summarySE(ubveg_iag, measurevar="BRJA_perc", groupvars=c("BURN2","YEAR2
 
 ```
 
-plotting function
+raw data plotting function
 ```{r fig.height=4.25, fig.width=8.5}
 plotIAG <- function(df,y.var){
  p <-  ggplot(df, aes(x = as.integer(as.character(YEAR2)), y = y.var, group = BURN2, color = BURN2) ) + 
@@ -223,6 +225,7 @@ plotIAG <- function(df,y.var){
 }
 ```
 
+plot raw data
 ```{r fig.height=4, fig.width=9}
 
 rawvd <- plotIAG(vdsum, vdsum$VEDU_perc) + ggtitle(expression(italic("V. dubia"))) +  theme(legend.position = "bottom")
@@ -232,26 +235,169 @@ rawbt <- plotIAG(btsum, btsum$BRTE_perc) + ggtitle(expression(italic("B. tectoru
 rawbj <- plotIAG(bjsum, bjsum$BRJA_perc) + ggtitle(expression(italic("B. arvensis"))) + theme(legend.position = "NULL") + ylab("")
 ```
 
+-------------------------------------------------------------------------
 
-## Model proportion IAG compared to total understory veg (After fire)
+## Part 2: Model proportion IAG compared to total understory veg (After fire)
+
+Organize species data
+```{r}
+#convert abudnance to number of hits for modeling so that all species are on the same scale (hits/40)
+df <- ubveg
+
+ub_veg <- df[6:114] * 40/100
+ub_veg <- cbind(df[1:5], ub_veg)
+
+#add  IAG col
+ub_veg$IAG <- (ub_veg$VEDU + ub_veg$BRJA + ub_veg$BRTE)
+
+#add CANOPY col
+ub_veg$CANOPY <- ub_veg$PIPO + ub_veg$PSME + ub_veg$JUOC
+
+#add all veg col
+ub_veg$all_veg <- rowSums(ub_veg[,6:114])
+
+#non IAG col
+ub_veg$all_veg_woIAG <- ub_veg$all_veg - ub_veg$IAG
+
+#all veg without the canopy and without IAG
+ub_veg$veg.noiag.nocanopy <- ub_veg$all_veg_woIAG - ub_veg$CANOPY
+
+#all veg without canopy cover
+ub_veg$all_veg.nocanopy <- ub_veg$all_veg - ub_veg$CANOPY
+
+#add proportion IAG col (out of understory veg)
+ub_veg$prop.IAG <- ub_veg$IAG/ub_veg$all_veg.nocanopy
+```
+
+Organize non-veg factors
+```{r}
+#change year to factor
+ub_veg$YEAR <- as.factor(ub_veg$YEAR)
+
+# combine unburned and c_unburned 
+ub_veg$burn2 <- ub_veg$BURN17
+ub_veg$burn2[ub_veg$burn2=="c_unburned"] <- "unburned"
+
+#redefine levels for burn17
+ub_veg$burn2 <- factor(ub_veg$burn2,
+levels = c("unburned", "<50", ">50") )
+```
 
 
+```{R}
+#organize data so that prefire IG cover has its own column
 
-```{r fig.height=8, fig.width=10}
+ubiag_postfire <- subset(ub_veg, YEAR != '16')
+ubiag_prefire <- subset(ub_veg, YEAR == '16')
+
+
+ubiag_prefire$IAG_prefire <- ubiag_prefire$IAG
+ubiag_prefire$all_veg.nocanopy_prefire <- ubiag_prefire$all_veg.nocanopy
+
+ubiag_prefiresub <- ubiag_prefire[c("PLOT", "IAG_prefire", "all_veg.nocanopy_prefire")]
+
+#merge prefire and post fire dataframes
+ub_merge <- merge(ubiag_postfire, ubiag_prefiresub, by = "PLOT")
+```
+
+
+model proportion of IAG to total non canopy vegetation
+```{r}
+hist(ub_merge$prop.IAG) 
+
+qplot(burn2, prop.IAG, data = ub_veg)
+
+# give our response as both the number of successes and failures (IAG and all_veg-IAG)
+
+gm1 <- glmer(cbind(IAG, all_veg.nocanopy - IAG) ~ burn2*YEAR + IAG_prefire + (1 | PLOT),
+              data = ub_merge, family = binomial)
+
+#fit with a different optimizer to allow convergence
+ss <- getME(gm1,c("theta","fixef"))
+gm2 <- update(gm1,start=ss,control=glmerControl(optimizer="bobyqa",
+                            optCtrl=list(maxfun=2e5)))
+
+# check for overdispersion
+
+# qplot(fitted(gm2), resid(gm2) ) +
+# theme_bw() +
+# labs(x = "Fitted",
+# y = "Deviance Residuals") 
+
+deviance(gm2)/df.residual(gm2) 
+#low overdispersion
+
+# summary(gm2)
+
+#Wald Chi-square for interaction effect
+Anova(gm1)
+```
+strong effect of pre-fire IAG, positive effect of year 20 and some negative effect of high severity. No evidence of interaction, although negative effect of burning seems to decrease with time after fire
+
+get contrasts
+```{r contrasts IAG prop}
+#use trt.vs.ctrl to compare all groups to reference level (unburned)
+emiag <- emmeans(gm1, specs = trt.vs.ctrl ~ burn2|YEAR  + IAG_prefire, adjust = NULL)
+
+emiag2 <- emiag$contrasts %>%
+     confint() %>% rbind()
+
+levels(emiag2$contrast) <- list("low severity - unburned" = "<50 - unburned", "high severity - unburned" = ">50 - unburned")
+levels(emiag2$YEAR) <- list("2018" = "18", "2019" = "19", "2020" = "20")
+```
+
+plot contrasts
+```{r plot contrasts IAG prop}
+iagcontrast <- plotcontrast(emiag2) +  theme(legend.position = "NULL") + ylab("") + ggtitle("")
+#prefire iag hits (total) - 6.46 = 8.11 % cover
+
+```
+
+plot raw data
+```{r fig.height=4, fig.width=3.5}
+#plot raw data with standard errors
+#summarize data
+library(Rmisc)
+#ventenata
+iagsum <- summarySE(ub_veg, measurevar="prop.IAG", groupvars=c("burn2","YEAR"))
+levels(iagsum$burn2) <- list("unburned" = "unburned", "low severity" = "<50", "high severity" = ">50")
+levels(iagsum$YEAR) <- list("2016" = "16", "2018" = "18", "2019" = "19", "2020" = "20")
+
+rawiagprop <- ggplot(iagsum, aes(x = as.integer(as.character(YEAR)), y = prop.IAG, group = burn2, color = burn2) ) + 
+		geom_line(position = position_dodge(0.2))+
+		geom_point(size = 3.2, position = position_dodge(0.2)) + # Add points
+  geom_errorbar(aes(ymin = prop.IAG - se, ymax = prop.IAG + se), width = .5, alpha = 0.5, size = 1, position = position_dodge(0.2))+
+		labs(x = NULL, y = "Proportion IAG") + # Label axes
+		theme_bw(base_size = 14) + # Make black and white,
+								# increase base text size
+			 theme(panel.grid.major.x = element_blank())+ # Remove y gridlines
+			         scale_color_manual(values = c("#52796f", "#dda15e", "#bc6c25"))+
+  theme(legend.position = "bottom")+ 
+  theme(legend.title = element_blank()) +
+  ggtitle("IAG-to-total cover") +
+  geom_vline(xintercept = 2017, colour = "dark grey", lty = 2)+
+    theme(panel.grid.major = element_blank(), panel.grid.minor = element_blank())
+
+
+#ggsave("propIAGraw.svg")
+```
+
+
+```{r fig.height=8, fig.width=12}
 legend <- get_legend(rawvd)
 
 rawvd <- rawvd + theme(legend.position="none") 
 
-rawplots <- ggarrange(rawvd, rawbt, rawbj, ncol = 3, nrow = 1, common.legend = TRUE, legend="bottom")
+rawplots <- ggarrange(rawvd, rawbt, rawbj, rawiagprop, ncol = 4, nrow = 1, common.legend = TRUE, legend="bottom")
 
-contrastplots <- ggarrange(vcontrast, btcontrast, bjcontrast, ncol = 3, nrow = 1, common.legend = TRUE, legend="bottom")
+contrastplots <- ggarrange(vcontrast, btcontrast, bjcontrast, iagcontrast, ncol = 4, nrow = 1, common.legend = TRUE, legend="bottom")
 
 allplots <- ggarrange(rawplots, contrastplots, nrow = 2)
   
 allplots
 
 
-# ggsave("annual_Grass_cover_through_time_raw.svg")
+# ggsave("all_IAG_models.svg")
 # ggsave("annual_Grass_cover_through_time_raw.png")
 ```
 
