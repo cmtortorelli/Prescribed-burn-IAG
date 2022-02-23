@@ -9,60 +9,202 @@ output: html_document
 knitr::opts_chunk$set(echo = TRUE)
 
 library(here)
-library(tidyr)
-library(dplyr)
+library(tidyverse)
+library(hydroTSM)
+library(zoo)
 ```
 
 ```{r read in data}
 
 temp <- read.csv(here("raw-data","RAWS", "Brer_Rabbit_RAWS.csv"))
+```
 
+
+```{r}
 #convert date to R date class
 temp$Date <- as.Date(temp$Date,
                      format = '%m/%d/%Y')
-```
-
-clean data
-```{r}
 #remove dates with no data
 temp <- temp[which(temp$precip_mm > -1 ),]
 
 #remove outliers from average
-tempsub <-  temp[which(temp$precip_mm < 100 ),]
+tempsub <-temp[which(temp$precip_mm < 100 ),]
 
-#subset temp data by year
-t16 <- tempsub[which(tempsub$Year == 2016),]
-t17 <- tempsub[which(tempsub$Year == 2017),]
-t18 <- tempsub[which(tempsub$Year == 2018),]
-t19 <- tempsub[which(tempsub$Year == 2019),]
-t20 <- tempsub[which(tempsub$Year == 2020),]
+#subset for precip data
+precip <- tempsub[,c(1,9)]
+
+#convert to zoo dataframe
+precipz <- read.zoo(precip, format = "%Y-%m-%d")
+smry(precipz)
+```
+
+explore plots
+```{r}
+#get sum of monthly precip
+
+hydroplot(precipz, pfreq="ma", FUN=sum,ptype = "ts")
+
+plot(precipz,xlab="",ylab="Daily rainfall, mm")
 
 
-#plot
-plot(t16$precip_mm ~ t16$day_of_year)
-#3 precip values that may be unrealisticly high? Or maybe high snowfall days?
-
+hydroplot(precipz, pfreq="seasonal", FUN=mean, stype="default")
 
 ```
 
-average precip by day of year 2010-2020
 ```{r}
+#get annual precip
+y <- daily2annual(precipz, FUN = sum, na.rm=TRUE)
+y <- data.frame(y[1:11])
+
+mean(y$y.1.11.)
+
+#compute difference from 10-yr mean
+# Daily zoo to monthly zoo
+m <- daily2monthly(precipz, FUN=mean, na.rm=TRUE)
+M <- matrix(m, ncol=12, byrow=TRUE)
+colnames(M) <- 1:12
+rownames(M) <- unique(format(time(m), "%Y"))
+
+#compute 10-yr average
+Mave <- colMeans(M)
+Mstudy <- M[6:11,]
+Mstudy.ave <- Mstudy-Mave
+
+#longformat
+Mdf <- data.frame(Mstudy.ave)
+Mdf$year <- rownames(Mdf)
+Ml <- gather(Mdf, month, precip_dif, -year)
+Ml$month <- substr(Ml$month,2,4)
+
+Ml$m.yr <- as.yearmon(paste(Ml$year, Ml$month), "%Y %m")
+precipMl_ord <- Ml[order(Ml$m.yr),]
+precipMl <- precipMl_ord[precipMl_ord$m.yr >= "Oct 2015" & precipMl_ord$m.yr <= "Aug 2020", ]
+
+precipMl$date <- as.Date(format(precipMl$m.yr, "%Y-%m-01"))
+```
+
+
+```{r}
+#create sampling dates dataframe
+month <- c(6, 9, 7, 7, 7)
+year <- c(2016:2020)
+type <- c("veg. sampling", "prescribed burn", "veg. sampling", "veg. sampling", "veg. sampling")
+df <- data.frame(year, month)
+df$m.yr <- as.yearmon(paste(year,month), "%Y %m")
+df$value <- 0
+df$type <- type
+
+df$date <- as.Date(format(df$m.yr, "%Y-%m-01"))
+```
+
+```{r fig.height=5, fig.width=7}
+# library(scales)
+ggplot(precipMl, aes(x = m.yr, y = precip_dif)) +
+  geom_line()+
+  theme_bw(base_size = 13) +
+  xlab("") +
+  ylab("difference in monthly mean precip (mm)") +
+  geom_hline(yintercept = 0, linetype = 2, color = "grey") +
+  theme(panel.grid.major = element_blank(), panel.grid.minor = element_blank()) +
+  geom_point(data = df, aes(x = m.yr, y = value, color = type), size = 4) +
+  scale_color_manual(values = c("#FF5733", "#20616E"))
+  # scale_x_date(labels = date_format("%h-%y"))+
+  #              months(seq(0,50, by = 6))
+  
+ggsave("precip.svg")
+```
+
+
+```{r}
+# Creating a matrix with monthly values per year in each column
+M <- matrix(m, ncol=12, byrow=TRUE)
+colnames(M) <- month.abb
+rownames(M) <- unique(format(time(m), "%Y"))
+
+# Plotting the monthly precipitation values
+require(lattice)
+## Loading required package: lattice
+print(matrixplot(M, ColorRamp="Precipitation",
+main="Monthly precipitation [mm/month]"))
+```
+
+compare to monthly averages
+```{r}
+Mave <- colMeans(M)
+Mstudy <- M[6:11,]
+Mstudy.ave <- Mstudy-Mave
+
+print(matrixplot(Mstudy.ave, ColorRamp= "Precipitation",
+main="Monthly precipitation [mm/month]"))
+
+#longformat
+Mdf <- data.frame(Mstudy.ave)
+Mdf$year <- rownames(Mdf)
+M.l <- gather(Mdf, month, precip_ave, -year)
+```
+
+separate water years
+```{r}
+#subset temp data by year ~water year Oct 1st- day 274-273
+t16 <- tempsub[tempsub$Date >= "2015-10-01" & tempsub$Date <= "2016-09-30", ]
+t17 <- tempsub[tempsub$Date >= "2016-10-01" & tempsub$Date <= "2017-09-30", ]
+t18 <- tempsub[tempsub$Date >= "2017-10-01" & tempsub$Date <= "2018-09-30", ]
+t19 <- tempsub[tempsub$Date >= "2018-10-01" & tempsub$Date <= "2019-09-30", ]
+t20 <- tempsub[tempsub$Date >= "2019-10-01" & tempsub$Date <= "2020-09-30", ]
+
+# reassign water year for grouping
+
+t16$wyr <- 2016
+t17$wyr <- 2017
+t18$wyr <- 2018
+t19$wyr <- 2019
+t20$wyr <- 2020
+
+#combine to new df
+newt <- rbind(t16, t17, t18, t19, t20)
+
+#add column for average precip 2010-2021
+
 precip_ave <- tempsub %>% group_by(day_of_year) %>%
   summarise(precip_ave = mean(precip_mm))
 
-#combine with 2020 data
-precip <- merge(precip_ave, t16, 
+precip <- merge(precip_ave, newt, 
   by = "day_of_year", all = TRUE)
 
-#remove 2 NAs
-precip <- precip[complete.cases(precip), ]
+
+plot((precip$precip_mm - precip$precip_ave ) ~ factor(precip$wyr))
 
 #sort by date
 precip_ord <- precip[order(precip$Date),]
+precip_ord$wyr <- factor(precip_ord$wyr)
 
-plot(precip_ord$Date, precip_ord$precip_mm,  type = "l") #2019-2020
-lines(precip_ord$Date, precip_ord$ave, col = "red") 
+precip_ord$date2 <- strftime(precip_ord$Date,"%m/%d")
+
+#quick plot
+p <- ggplot(precip, aes(x=factor(wyr), y=precip_mm - precip_ave)) + 
+  geom_violin() +
+  geom_boxplot(width=0.1)
 ```
+
+plot yearly precip
+```{r}
+ggplot(precip_ord, aes(x = Date, y = precip_mm)) + 
+  geom_line() +
+  # geom_point()+
+  # geom_smooth(method = "loess") +
+  geom_line(aes(x = Date, y = precip_ave), col = "red")+
+  theme_classic()
+
+ggplot(precip_ord, aes(x = day_of_year, y = precip_mm, group_by(wyr), col = wyr)) +
+          geom_smooth(aes(x = day_of_year, y = precip_ave), method = "loess", col = "maroon", alpha = 0.05)+
+         geom_smooth(method = "loess", alpha = 0.1)+
+          theme_classic() +
+          scale_color_manual(values = c("#BDD7E7", "#6BAED6", "#3182BD", "#08519C", "#00002a"))
+
+```
+
+
+
 
 Smooth data with moving average
 ```{r}
@@ -92,11 +234,6 @@ library(stats)
 precip_ord$precipAve_smooth <- stats::filter(precip_ord$precip_ave, ma21, method = "convolution", sides = 2)
 precip_ord$precip16_smooth <- stats::filter(precip_ord$precip_mm, ma21, method = "convolution", sides = 2)
 
-
-t17$precip17_smooth <- stats::filter(t17$precip_mm, ma21, method = "convolution", sides = 2)
-t18$precip18_smooth <- stats::filter(t18$precip_mm, ma21, method = "convolution", sides = 2)
-t19$precip19_smooth <- stats::filter(t19$precip_mm, ma21, method = "convolution", sides = 2)
-t20$precip20_smooth <- stats::filter(t20$precip_mm, ma21, method = "convolution", sides = 2)
 ```
 
 ```{r}
@@ -107,10 +244,6 @@ plot(precip_ord$day_of_year, precip_ord$precip16_smooth, type = "l", col = "blue
 
 lines(precip_ord$day_of_year, precip_ord$precipAve_smooth, type = "l", main = "Precip (mm)")
 
-lines(t17$day_of_year, t17$precip17_smooth, type = "l", main = "Precip (mm)", col = "red")
-lines(t18$day_of_year, t18$precip18_smooth, type = "l", main = "Precip (mm)", col = "green")
-lines(t19$day_of_year, t19$precip19_smooth, type = "l", main = "Precip (mm)", col = "dark green")
-lines(t20$day_of_year, t20$precip20_smooth, type = "l", main = "Precip (mm)", col = "dark blue")
 
 legend("topright", legend=c("2016", "2017", "2018", "2019", "2020", "10 yr ave."),
        col=c("blue", "red", "green", "dark green", "dark blue", "black"), lty=1, cex=0.8)
