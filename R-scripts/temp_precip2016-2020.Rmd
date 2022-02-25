@@ -17,6 +17,7 @@ library(zoo)
 ```{r read in data}
 
 temp <- read.csv(here("raw-data","RAWS", "Brer_Rabbit_RAWS.csv"))
+
 ```
 
 
@@ -32,10 +33,13 @@ tempsub <-temp[which(temp$precip_mm < 100 ),]
 
 #subset for precip data
 precip <- tempsub[,c(1,9)]
-
+t <- temp[,c(1,6)]
+  
 #convert to zoo dataframe
+tz <- read.zoo(t, format = "%Y-%m-%d")
 precipz <- read.zoo(precip, format = "%Y-%m-%d")
-smry(precipz)
+
+smry(t)
 ```
 
 explore plots
@@ -48,6 +52,7 @@ plot(precipz,xlab="",ylab="Daily rainfall, mm")
 
 
 hydroplot(precipz, pfreq="seasonal", FUN=mean, stype="default")
+# hydroplot(tz, pfreq="seasonal", FUN=mean, stype="default")
 
 ```
 
@@ -83,6 +88,36 @@ precipMl <- precipMl_ord[precipMl_ord$m.yr >= "Oct 2015" & precipMl_ord$m.yr <= 
 precipMl$date <- as.Date(format(precipMl$m.yr, "%Y-%m-01"))
 ```
 
+repeat for min temperature
+```{r temp}
+#compute difference from 10-yr mean
+# Daily zoo to monthly zoo
+mt <- daily2monthly(tz, FUN=mean, na.rm=TRUE)
+Mt <- matrix(mt, ncol=12, byrow=TRUE)
+colnames(Mt) <- 1:12
+rownames(Mt) <- unique(format(time(mt), "%Y"))
+
+#compute 10-yr average
+Mtave <- colMeans(Mt)
+Mtstudy <- Mt[6:11,]
+Mtstudy.ave <- Mtstudy-Mtave
+
+#longformat
+Mtdf <- data.frame(Mtstudy.ave)
+Mtdf$year <- rownames(Mtdf)
+Mtl <- gather(Mtdf, month, tmin_dif, -year)
+Mtl$month <- substr(Mtl$month,2,4)
+
+Mtl$m.yr <- as.yearmon(paste(Mtl$year, Mtl$month), "%Y %m")
+tminMl_ord <- Mtl[order(Mtl$m.yr),]
+tminMl <- tminMl_ord[tminMl_ord$m.yr >= "Oct 2015" & tminMl_ord$m.yr <= "Aug 2020", ]
+
+tminMl$date <- as.Date(format(tminpMl$m.yr, "%Y-%m-01"))
+```
+
+
+
+
 
 ```{r}
 #create sampling dates dataframe
@@ -97,21 +132,42 @@ df$type <- type
 df$date <- as.Date(format(df$m.yr, "%Y-%m-01"))
 ```
 
-```{r fig.height=5, fig.width=7}
+```{r fig.height=3.2, fig.width=10}
 # library(scales)
 ggplot(precipMl, aes(x = m.yr, y = precip_dif)) +
-  geom_line()+
+  # geom_line()+
+  geom_bar(stat = "identity", fill = "#20616E", alpha = 0.3)+
+  geom_smooth(method = "loess", alpha = 0.2, color = "black")+
   theme_bw(base_size = 13) +
   xlab("") +
-  ylab("difference in monthly mean precip (mm)") +
+  ylab("dif. in monthly mean precip (mm)") +
   geom_hline(yintercept = 0, linetype = 2, color = "grey") +
   theme(panel.grid.major = element_blank(), panel.grid.minor = element_blank()) +
-  geom_point(data = df, aes(x = m.yr, y = value, color = type), size = 4) +
-  scale_color_manual(values = c("#FF5733", "#20616E"))
+  geom_point(data = df, aes(x = m.yr, y = value), color = "black", size = 4)
+ # scale_color_manual(values = c("#FF5733", "#20616E"))
   # scale_x_date(labels = date_format("%h-%y"))+
   #              months(seq(0,50, by = 6))
   
-ggsave("precip.svg")
+#ggsave("precip.svg")
+```
+
+```{r fig.height=3.2, fig.width=10}
+# library(scales)
+ggplot(tminMl, aes(x = m.yr, y = tmin_dif)) +
+  # geom_line()+
+  geom_bar(stat = "identity", fill = "dark blue", alpha = 0.3)+
+  geom_smooth(method = "loess", alpha = 0.2, color = "black")+
+  theme_bw(base_size = 13) +
+  xlab("") +
+  ylab("dif. in min temp") +
+  geom_hline(yintercept = 0, linetype = 2, color = "grey") +
+  theme(panel.grid.major = element_blank(), panel.grid.minor = element_blank())
+
+ # scale_color_manual(values = c("#FF5733", "#20616E"))
+  # scale_x_date(labels = date_format("%h-%y"))+
+  #              months(seq(0,50, by = 6))
+  
+#ggsave("precip.svg")
 ```
 
 
@@ -126,6 +182,8 @@ require(lattice)
 ## Loading required package: lattice
 print(matrixplot(M, ColorRamp="Precipitation",
 main="Monthly precipitation [mm/month]"))
+
+M
 ```
 
 compare to monthly averages
@@ -162,6 +220,9 @@ t20$wyr <- 2020
 
 #combine to new df
 newt <- rbind(t16, t17, t18, t19, t20)
+
+sumwy <- newt %>% group_by(wyr) %>%
+  summarise(mean_precip = mean(precip_mm))
 
 #add column for average precip 2010-2021
 
@@ -278,4 +339,34 @@ precip$month <- month(as.POSIXlt(precip$Date, format="%m/%d/%Y"))
 plot(precip_mo$month, precip_mo$sum2020, col = "blue",
           xlab="month", ylab="Monthly precip. (mm)")
 points(precip_mo$month, precip_mo$sumAve, col = "black")
+```
+
+----------------------------------
+## Compare precip to annual grass cover 
+
+```{r precip r2}
+#read in veg data
+# ubveg <- read.csv(here("raw-data/ubdata_16-20_species_average.csv"))
+yr_contrast <- read.csv(here("model-output", "year_constrast_IAG.csv"))
+#load precipitation difference from 10-year mean by water year
+pdif <- read.csv(here("raw-data", "RAWS","precip_dif_by_water_year.csv"))
+pdif <- pdif %>% subset(YEAR > 2017)
+```
+
+
+```{r}
+# ubveg_sum <- ubveg %>% select(c("YEAR", "PLOT", "BURN17", "VEDU", "BRTE", "BRJA")) %>%
+#   subset(BURN17 == "unburned" | BURN17 == "c_unburned") %>%
+#   group_by(YEAR) %>%
+#   summarise(meanVD = mean(VEDU),
+#             meanBT = mean(BRTE),
+#             meanBJ = mean(BRJA))
+
+# ubveg_sum$YEAR <- c(2016, 2018, 2019, 2020)
+
+
+pdif_veg <- merge(yr_contrast, pdif)
+
+res <- cor(pdif_veg[-1,-2])
+res <- round(res, 2)
 ```

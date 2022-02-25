@@ -11,9 +11,11 @@ library(vegan)
 library(expss)
 library(tidyverse)
 library(here)
+library(lme4)
 #install.packages(c("wordcloud","tm"),repos="http://cran.r-project.org")
 library(wordcloud)
 library(tm)
+library(emmeans)
 ```
 
 ```{r read in data}
@@ -64,28 +66,66 @@ div$BURN2 <- div$BURN17
 div$BURN2[which(div$BURN2 == "c_unburned")] <- "unburned"
 
 div$BURN17 <- factor(div$BURN17, levels = c("unburned", "<50", ">50"))
-
-
-m1 <- lmer(shan ~ YEAR*BURN17 + (1|PLOT), data = div)
-plot(m1)
-
-summary(m1)
-confint(m1)
-
-m2 <- lmer(richness ~ YEAR*BURN17 + (1|PLOT), data = div)
-plot(m2)
-
-summary(m2)
-confint(m2)
-(emmeans(m2, specs = revpairwise ~ BURN17 | YEAR, adjust = NULL))
-
-
-library(car)
-Anova(m1, type = 2)
-Anova(m2, type = 2)
 ```
 
 
+model change since fire with pre-fire ventenata and brome as baseline
+```{R}
+#separate pre-fire data from post-fire data
+
+div_postfire <- subset(div, YEAR != '16')
+div_prefire <- subset(div, YEAR == '16')
+
+
+div_prefire$richness_prefire <- div_prefire$richness
+div_prefire$shan_prefire <- div_prefire$shan
+
+
+div_prefiresub <- div_prefire[c("PLOT", "richness_prefire", "shan_prefire")]
+
+#merge prefire and post fire dataframes
+div_merge <- merge(div, div_prefiresub, by = "PLOT")
+
+```
+
+Model diversity
+```{r model diversity}
+
+mshan <- lmer(shan ~ YEAR*BURN17 + shan_prefire + (1|PLOT), data = div_merge)
+plot(mshan)
+
+summary(mshan)
+confint(mshan)
+
+mrich <- lmer(richness ~ YEAR*BURN17 + richness_prefire + (1|PLOT), data = div_merge)
+plot(mrich)
+
+summary(mrich)
+confint(mrich)
+
+
+(emmeans(mrich, specs = revpairwise ~ BURN17 | YEAR, adjust = NULL))
+(emmeans(mshan, specs = revpairwise ~ BURN17 | YEAR, adjust = NULL))
+
+
+library(car)
+Anova(mrich, type = 2)
+Anova(mshan, type = 2)
+```
+
+
+change in functional group - shrubs?
+```{r}
+funcdf20 <- funcdf %>% subset(YEAR == 20) 
+funcdfburn <- funcdf %>% subset(BURN17 == ">50")
+
+plot(funcdfburn$Shrub ~ factor(funcdfburn$YEAR))
+
+``` 
+
+--------------------------------------------------
+
+# Community NMS
 
 remove overstory species
 ```{r}
@@ -170,6 +210,10 @@ sp4nms2$PLOT_YR  <- NULL
 
 nms2 <- metaMDS(sqrt(sp4nms2), distance='bray', k=2, trymax=50, autotransform=FALSE, wasscores=TRUE, noshare=FALSE) 
 ```
+```{r}
+#rotate to weigh invasive annual grasses on x axis
+nms2_rot <- with(funcdf_sub, MDSrotate(nms2, Invasive.Annual.Grass))
+```
 
 
 
@@ -181,78 +225,83 @@ ub_vegnorare2$BURN2[which(ub_vegnorare2$BURN2 == "c_unburned")] <- "unburned"
 
 ub_vegnorare2$BURN2_YR <- paste(ub_vegnorare2$BURN2, ub_vegnorare2$YEAR, sep = "_")
 ub_vegnorare2$BURN17_YR <- paste(ub_vegnorare2$BURN17, ub_vegnorare2$YEAR, sep = "_")
+
+ub_vegnorare2$BURN2_YR <- factor(ub_vegnorare2$BURN2_YR, levels = c("unburned_16", "<50_16", ">50_16", "unburned_20", "<50_20", ">50_20"))
+
+ub_vegnorare2$BURN2 <- factor(ub_vegnorare2$BURN2, levels = c("unburned", "<50", ">50"))
+ub_vegnorare2$YEAR <- factor(ub_vegnorare2$YEAR)
 ```
 
 ```{r}
 #extract scores to plot with vectors
-speciesScores <- nms2$species
-siteScores <- nms2$points
+speciesScores <- nms2_rot$species
+siteScores <- nms2_rot$points
 
 siteScores_burn <- cbind(data.frame(siteScores), ub_vegnorare2[,"BURN17"])
 
 species <- rownames(speciesScores)
+
+
 ```
 
 
 
-```{r fig.height=8, fig.width=8}
-plot(nms2, type = "n")
-
-with(ub_vegnorare2, points(nms2, display = "sites", col = c("#606c38", "#dda15e", "#bc6c25")[BURN2], cex=1.25, pch = c(16, 17)[YEAR]))
 
 
-ordiellipse(nms2, ub_vegnorare2$BURN2_YR,
+```{r fig.height=6, fig.width=11}
+svg("speciesNMS.svg", width = 11, height = 6)
+
+par(mfrow=c(1,2))
+
+plot(nms2_rot, type = "n")
+
+with(ub_vegnorare2, points(nms2_rot, display = "sites", col = c("#52796f", "#dda15e", "#bc6c25")[BURN2], cex=1.25, pch = c(16, 17)[YEAR]))
+
+#add species text
+# text(nms2_rot, display = "spec", cex=0.7, col="grey")
+
+ordiellipse(nms2_rot, ub_vegnorare2$BURN2_YR,
             scaling = 3, label = FALSE, draw = "polygon",
-            col = c("#dda15e", "red",  "#606c38"),
+            col = c("#52796f", "#dda15e", "#bc6c25"),
             kind = "sd",
-            alpha = 30,
-            #show.groups = c("unburned_20", "<50_20", ">50_20")
+            alpha = 40,
+            show.groups = c("unburned_16", "<50_16", ">50_16"),
             border = "white")
 
-plot(env.fit2)
-# ordihull(nms2, ub_vegnorare2$BURN2_YR,
-#             scaling = 3, label = FALSE, draw = "polygon",
-#             col = c("#dda15e", "red",  "#606c38"),
-#             #kind = "ehull",
-#             alpha = 20,
-#             show.groups = c("unburned_20", "<50_20", ">50_20"),
-#             border = "white")
-
-# ordihull(nms2, ub_vegnorare2$YEAR,
-#             scaling = 3, label = FALSE, draw = "polygon",
-#             col = c("blue", "red"),
-#             #kind = "ehull",
-#             alpha = 20,
-#             #show.groups = c("unburned_20", "<50_20", ">50_20"),
-#             border = "white")
-
-# ordiellipse(nms2, ub_vegnorare2$BURN2_YR,
-#             scaling = 3, label = FALSE, draw = "polygon",
-#             col = c("#dda15e", "red",  "#606c38"),
-#             kind = "sd",
-#             alpha = 20,
-#             show.groups = c("unburned_20", "<50_20", ">50_20"),
-#             border = "white")
-
-#arrows(0, 0, variableScores[, 1], variableScores[, 2], length=0.1, angle=20, col ="grey")
 
 
-#add species points
-points(speciesScores[, 1], speciesScores[, 2], pch=17, cex=0.75, col="grey")
+#add the linear vectors for functional groups
+plot(env.fit, col = "black", font = 2, cex=0.8)
 
-ordiarrows (nms2, groups = ub_vegnorare2$PLOT, order.by = ub_vegnorare2$YEAR, 
-            label = FALSE, length = .1, 
-            display = "sites", col = "black")
+#--------------------------------------------------------------------
 
-#set text
-#wordcloud::textplot(speciesScores[, 1], speciesScores[, 2], species)
-# text(speciesScores[, 1], speciesScores[, 2], pos = 3, offset = 0.5, col = "black", font = 2, rownames(speciesScores), cex=0.7)
+# plot post-fire (same NMS with 2020 ellipses)
 
-#text(siteScores_burn[, 1], siteScores_burn[, 2], pos = 3, offset = 0.5, col = "black", font = 2, rownames(siteScores_burn), cex=0.7)
+plot(nms2_rot, type = "n")
 
+
+with(ub_vegnorare2, points(nms2_rot, display = "sites", col = c("#52796f", "#dda15e", "#bc6c25")[BURN2], cex=1.25, pch = c(16, 17)[YEAR]))
+
+#with(ub_vegnorare2, points(nms2_rot, display = "species", col = "grey", cex=1.25, pch = 4), label = TRUE)
+# text(nms2_rot, display = "spec", cex=0.7, col="grey")
+
+ordiellipse(nms2_rot, ub_vegnorare2$BURN2_YR,
+            scaling = 3, label = FALSE, draw = "polygon",
+            col = c("#52796f", "#dda15e", "#bc6c25"),
+            kind = "sd",
+            alpha = 40,
+            show.groups = c("unburned_20", "<50_20", ">50_20"),
+            border = "white")
+
+plot(env.fit, col = "black", font = 2, cex=0.8)
+
+
+
+dev.off()
 ```
 
-### NMS with only YR 2016 (pre-fire) & 2020 (3 yrs post fire) by functional group
+
+## NMS with only YR 2016 (pre-fire) & 2020 (3 yrs post fire) by functional group
 ```{R with only 16 and 20 data}
 funcdf$BURN2 <- funcdf$BURN17
 funcdf$BURN2[which(funcdf$BURN2 == "c_unburned")] <- "unburned"

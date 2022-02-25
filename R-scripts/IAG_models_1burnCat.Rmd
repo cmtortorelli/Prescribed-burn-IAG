@@ -132,7 +132,7 @@ summary(m.bj2)
 Anova(m.bj2)
 
 #for unburned plots and all years
-(emvdyr <- emmeans(m.vdyr, revpairwise ~ YEAR, adjust = NULL))
+(emvdyr <- emmeans(m.vdyr, revpairwise ~ YEAR, adjust = NULL)) #, type = "response"
 (embtyr <- emmeans(m.btyr, revpairwise ~ YEAR, adjust = NULL))
 (embjyr <- emmeans(m.bjyr, revpairwise ~ YEAR, adjust = NULL))
 ```
@@ -411,7 +411,7 @@ allplots <- ggarrange(rawplots, contrastplots, nrow = 2)
 allplots
 
 
-ggsave("all_IAG_models.svg")
+# ggsave("all_IAG_models.svg")
 # ggsave("annual_Grass_cover_through_time_raw.png")
 ```
 
